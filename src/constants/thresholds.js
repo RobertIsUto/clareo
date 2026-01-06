@@ -1,0 +1,13 @@
+export const THRESHOLDS = {
+  MIN_WORDS: 100,
+  LOW_CV: 25,
+  HIGH_PREDICTABILITY: 30,
+  HIGH_FORMULAIC: 10,
+  SIGNIFICANT_DIFF: 5,
+  HIGH_SEVERITY_THRESHOLD: 2,
+};
+
+export const HUMAN_NGRAM_BASELINE = {
+  bigramRate: 15,
+  trigramRate: 3,
+};
