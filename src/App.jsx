@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo } from "react";
 import "./App.css";
 import { MetricCard } from "./components/MetricCard";
 import { TextHighlighter } from "./components/TextHighlighter";
-import { PhraseSuggestions } from "./components/PhraseSuggestions";
 import { runFullAnalysis } from "./utils/textAnalysis";
 import { generateAnalysisPDF, generateComparisonPDF } from "./utils/pdfGenerator";
 import { getWordCount } from "./utils/textHelpers";
@@ -255,8 +254,6 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           <span>Low: {results.formalRegister.severity.low}</span>
         </div>
       </div>
-
-      <PhraseSuggestions phrases={results.formalPhrases} />
 
       <div className="highlighter-controls">
         {[

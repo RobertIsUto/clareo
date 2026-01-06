@@ -88,13 +88,13 @@ export const generateAnalysisPDF = (results) => {
       ${results.formalPhrases.length > 0 ? `
       <h2>Formulaic Phrases Detected</h2>
       <table>
-        <tr><th>Found</th><th>Try Instead</th><th>Count</th><th>Weight</th></tr>
+        <tr><th>Phrase</th><th>Count</th><th>Weight</th><th>Score</th></tr>
         ${results.formalPhrases.slice(0, 15).map(p => `
           <tr>
-            <td style="font-weight: 500;">${sanitizeHTML(p.phrase)}</td>
-            <td style="color: #27ae60;">→ ${sanitizeHTML(p.suggestion)}</td>
+            <td>${sanitizeHTML(p.phrase)}</td>
             <td>${p.count}</td>
             <td>${p.weight}</td>
+            <td>${p.weightedScore}</td>
           </tr>
         `).join('')}
       </table>

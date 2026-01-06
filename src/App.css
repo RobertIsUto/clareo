@@ -89,8 +89,7 @@ body {
 .content-wrapper {
   flex: 1;
   width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .header {
@@ -606,9 +605,7 @@ textarea::placeholder {
   border-top: 1px solid var(--border-light);
   color: var(--text-secondary);
   font-size: 0.875rem;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
 }
 
 .references h3 {
@@ -630,62 +627,6 @@ textarea::placeholder {
 
 .ref-item strong {
   color: var(--text-primary);
-}
-
-.phrase-suggestion {
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-md);
-  background: rgba(82, 183, 136, 0.05);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(82, 183, 136, 0.2);
-}
-
-.phrase-suggestion h4 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--spacing-sm);
-}
-
-.suggestion-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.suggestion-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: 0.875rem;
-  padding: 0.5rem;
-  border-radius: var(--radius-sm);
-  transition: background 0.2s ease;
-}
-
-.suggestion-item:hover {
-  background: rgba(82, 183, 136, 0.1);
-}
-
-.suggestion-found {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.suggestion-arrow {
-  color: var(--success);
-  font-weight: bold;
-}
-
-.suggestion-try {
-  color: var(--success);
-  font-weight: 500;
-}
-
-.suggestion-count {
-  margin-left: auto;
-  color: var(--text-muted);
-  font-size: 0.75rem;
 }
 
 @media (max-width: 1024px) {

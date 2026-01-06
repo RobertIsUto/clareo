@@ -116,9 +116,7 @@ export function analyzeFormalRegister(text) {
       found.push({
         ...item,
         count,
-        weightedScore,
-        // Include suggestion in results for UI display
-        suggestion: item.suggestion
+        weightedScore
       });
     }
   });
