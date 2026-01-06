@@ -1,128 +1,94 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 
+// IMPROVEMENT 1: Weighted phrase scoring with severity levels
 const FORMAL_REGISTER_PHRASES = [
-  { phrase: "delve into", category: "AI Cliché" },
-  { phrase: "delve", category: "AI Cliché" },
-  { phrase: "dive deep", category: "AI Cliché" },
-  { phrase: "tapestry", category: "AI Cliché" },
-  { phrase: "rich tapestry", category: "AI Cliché" },
-  { phrase: "testament to", category: "AI Cliché" },
-  { phrase: "testament", category: "AI Cliché" },
-  { phrase: "landscape", category: "AI Cliché" },
-  { phrase: "ever-evolving", category: "AI Cliché" },
-  { phrase: "rapidly evolving", category: "AI Cliché" },
-  { phrase: "dynamic", category: "AI Cliché" },
-  { phrase: "realm", category: "AI Cliché" },
-  { phrase: "beacon", category: "AI Cliché" },
-  { phrase: "cornerstone", category: "AI Cliché" },
-  { phrase: "pinnacle", category: "AI Cliché" },
-  { phrase: "game-changer", category: "AI Cliché" },
-  { phrase: "leverage", category: "AI Cliché" },
-  { phrase: "harness", category: "AI Cliché" },
-  { phrase: "unleash", category: "AI Cliché" },
-  { phrase: "unlock", category: "AI Cliché" },
-  { phrase: "elevate", category: "AI Cliché" },
-  { phrase: "revolutionize", category: "AI Cliché" },
-  { phrase: "transformative", category: "AI Cliché" },
-  { phrase: "foster", category: "AI Cliché" },
-  { phrase: "cultivate", category: "AI Cliché" },
-  { phrase: "spearhead", category: "AI Cliché" },
-  { phrase: "orchestrate", category: "AI Cliché" },
-  { phrase: "navigating", category: "AI Cliché" },
-  { phrase: "embarked on", category: "AI Cliché" },
-  { phrase: "embark", category: "AI Cliché" },
-  { phrase: "journey", category: "AI Cliché" },
-  { phrase: "shed light on", category: "AI Cliché" },
-  { phrase: "underscore", category: "AI Cliché" },
-  { phrase: "underscores", category: "AI Cliché" },
-  { phrase: "myriad", category: "AI Cliché" },
-  { phrase: "plethora", category: "AI Cliché" },
-  { phrase: "intersection", category: "AI Cliché" },
-  { phrase: "interplay", category: "AI Cliché" },
-  { phrase: "synergy", category: "AI Cliché" },
-  { phrase: "symbiotic", category: "AI Cliché" },
-  { phrase: "multifaceted", category: "AI Cliché" },
-  { phrase: "nuanced", category: "AI Cliché" },
-  { phrase: "holistic", category: "AI Cliché" },
-  { phrase: "comprehensive", category: "AI Cliché" },
-  { phrase: "paradigm shift", category: "AI Cliché" },
-  { phrase: "paradigm", category: "AI Cliché" },
-  { phrase: "crucial", category: "AI Cliché" },
-  { phrase: "pivotal", category: "AI Cliché" },
-  { phrase: "vital", category: "AI Cliché" },
-  { phrase: "it is important to note", category: "hedging" },
-  { phrase: "it is worth noting", category: "hedging" },
-  { phrase: "in terms of", category: "academic phrase" },
-  { phrase: "with regard to", category: "formal connector" },
-  { phrase: "with respect to", category: "formal connector" },
-  { phrase: "in light of", category: "formal connector" },
-  { phrase: "plays a crucial role", category: "emphasis phrase" },
-  { phrase: "plays a vital role", category: "emphasis phrase" },
-  { phrase: "plays a pivotal role", category: "emphasis phrase" },
-  { phrase: "it is essential to", category: "hedging" },
-  { phrase: "it is crucial to", category: "hedging" },
-  { phrase: "in conclusion", category: "discourse marker" },
-  { phrase: "to summarize", category: "discourse marker" },
-  { phrase: "in summary", category: "discourse marker" },
-  { phrase: "furthermore", category: "formal connector" },
-  { phrase: "moreover", category: "formal connector" },
-  { phrase: "nevertheless", category: "formal connector" },
-  { phrase: "nonetheless", category: "formal connector" },
-  { phrase: "consequently", category: "formal connector" },
-  { phrase: "subsequently", category: "formal connector" },
-  { phrase: "first and foremost", category: "emphasis phrase" },
-  { phrase: "comprehensive understanding", category: "academic phrase" },
-  { phrase: "holistic approach", category: "academic phrase" },
-  { phrase: "facilitate", category: "academic vocabulary" },
-  { phrase: "utilize", category: "academic vocabulary" },
-  { phrase: "implement", category: "academic vocabulary" },
+  // High severity (weight 3) - Very strong formulaic indicators
+  { phrase: "delve into", category: "cliché", weight: 3 },
+  { phrase: "delve", category: "cliché", weight: 3 },
+  { phrase: "tapestry", category: "cliché", weight: 3 },
+  { phrase: "rich tapestry", category: "cliché", weight: 3 },
+  { phrase: "testament to", category: "cliché", weight: 3 },
+  { phrase: "beacon", category: "cliché", weight: 3 },
+  { phrase: "multifaceted", category: "cliché", weight: 3 },
+  { phrase: "ever-evolving", category: "cliché", weight: 3 },
+  { phrase: "myriad", category: "cliché", weight: 3 },
+  { phrase: "plethora", category: "cliché", weight: 3 },
+  { phrase: "paradigm shift", category: "cliché", weight: 3 },
+  { phrase: "symbiotic", category: "cliché", weight: 3 },
+  { phrase: "embark", category: "cliché", weight: 3 },
+  { phrase: "embarked on", category: "cliché", weight: 3 },
+  
+  // Medium severity (weight 2) - Common formulaic patterns
+  { phrase: "dive deep", category: "cliché", weight: 2 },
+  { phrase: "testament", category: "cliché", weight: 2 },
+  { phrase: "landscape", category: "cliché", weight: 2 },
+  { phrase: "rapidly evolving", category: "cliché", weight: 2 },
+  { phrase: "dynamic", category: "cliché", weight: 2 },
+  { phrase: "realm", category: "cliché", weight: 2 },
+  { phrase: "cornerstone", category: "cliché", weight: 2 },
+  { phrase: "pinnacle", category: "cliché", weight: 2 },
+  { phrase: "game-changer", category: "cliché", weight: 2 },
+  { phrase: "leverage", category: "cliché", weight: 2 },
+  { phrase: "harness", category: "cliché", weight: 2 },
+  { phrase: "unleash", category: "cliché", weight: 2 },
+  { phrase: "unlock", category: "cliché", weight: 2 },
+  { phrase: "elevate", category: "cliché", weight: 2 },
+  { phrase: "revolutionize", category: "cliché", weight: 2 },
+  { phrase: "transformative", category: "cliché", weight: 2 },
+  { phrase: "foster", category: "cliché", weight: 2 },
+  { phrase: "cultivate", category: "cliché", weight: 2 },
+  { phrase: "spearhead", category: "cliché", weight: 2 },
+  { phrase: "orchestrate", category: "cliché", weight: 2 },
+  { phrase: "navigating", category: "cliché", weight: 2 },
+  { phrase: "journey", category: "cliché", weight: 2 },
+  { phrase: "shed light on", category: "cliché", weight: 2 },
+  { phrase: "underscore", category: "cliché", weight: 2 },
+  { phrase: "underscores", category: "cliché", weight: 2 },
+  { phrase: "intersection", category: "cliché", weight: 2 },
+  { phrase: "interplay", category: "cliché", weight: 2 },
+  { phrase: "synergy", category: "cliché", weight: 2 },
+  { phrase: "nuanced", category: "cliché", weight: 2 },
+  { phrase: "holistic", category: "cliché", weight: 2 },
+  { phrase: "paradigm", category: "cliché", weight: 2 },
+  
+  // Lower severity (weight 1) - Can appear in human writing but suspicious in clusters
+  { phrase: "comprehensive", category: "cliché", weight: 1 },
+  { phrase: "crucial", category: "cliché", weight: 1 },
+  { phrase: "pivotal", category: "cliché", weight: 1 },
+  { phrase: "vital", category: "cliché", weight: 1 },
+  { phrase: "it is important to note", category: "hedging", weight: 1 },
+  { phrase: "it is worth noting", category: "hedging", weight: 1 },
+  { phrase: "in terms of", category: "academic phrase", weight: 1 },
+  { phrase: "with regard to", category: "formal connector", weight: 1 },
+  { phrase: "with respect to", category: "formal connector", weight: 1 },
+  { phrase: "in light of", category: "formal connector", weight: 1 },
+  { phrase: "plays a crucial role", category: "emphasis phrase", weight: 2 },
+  { phrase: "plays a vital role", category: "emphasis phrase", weight: 2 },
+  { phrase: "plays a pivotal role", category: "emphasis phrase", weight: 2 },
+  { phrase: "it is essential to", category: "hedging", weight: 1 },
+  { phrase: "it is crucial to", category: "hedging", weight: 1 },
+  { phrase: "in conclusion", category: "discourse marker", weight: 1 },
+  { phrase: "to summarize", category: "discourse marker", weight: 1 },
+  { phrase: "in summary", category: "discourse marker", weight: 1 },
+  { phrase: "furthermore", category: "formal connector", weight: 1 },
+  { phrase: "moreover", category: "formal connector", weight: 1 },
+  { phrase: "nevertheless", category: "formal connector", weight: 1 },
+  { phrase: "nonetheless", category: "formal connector", weight: 1 },
+  { phrase: "consequently", category: "formal connector", weight: 1 },
+  { phrase: "subsequently", category: "formal connector", weight: 1 },
+  { phrase: "first and foremost", category: "emphasis phrase", weight: 2 },
+  { phrase: "comprehensive understanding", category: "academic phrase", weight: 2 },
+  { phrase: "holistic approach", category: "academic phrase", weight: 2 },
+  { phrase: "facilitate", category: "academic vocabulary", weight: 1 },
+  { phrase: "utilize", category: "academic vocabulary", weight: 1 },
+  { phrase: "implement", category: "academic vocabulary", weight: 1 },
 ];
 
 const CONNECTIVES = {
-  additive: [
-    "and",
-    "also",
-    "moreover",
-    "furthermore",
-    "additionally",
-    "besides",
-    "likewise",
-    "similarly",
-  ],
-  adversative: [
-    "but",
-    "however",
-    "yet",
-    "nevertheless",
-    "nonetheless",
-    "although",
-    "though",
-    "whereas",
-    "while",
-    "conversely",
-  ],
-  causal: [
-    "because",
-    "therefore",
-    "thus",
-    "hence",
-    "consequently",
-    "accordingly",
-    "so",
-    "since",
-  ],
-  temporal: [
-    "then",
-    "next",
-    "finally",
-    "subsequently",
-    "meanwhile",
-    "afterward",
-    "previously",
-    "first",
-    "second",
-    "third",
-  ],
+  additive: ["and", "also", "moreover", "furthermore", "additionally", "besides", "likewise", "similarly"],
+  adversative: ["but", "however", "yet", "nevertheless", "nonetheless", "although", "though", "whereas", "while", "conversely"],
+  causal: ["because", "therefore", "thus", "hence", "consequently", "accordingly", "so", "since"],
+  temporal: ["then", "next", "finally", "subsequently", "meanwhile", "afterward", "previously", "first", "second", "third"],
 };
 
 const HIGH_FREQUENCY_WORDS = new Set([
@@ -141,6 +107,35 @@ const HIGH_FREQUENCY_WORDS = new Set([
   "every", "both", "few", "many",
 ]);
 
+// IMPROVEMENT 2: Common formulaic bigrams and trigrams
+const FORMULAIC_NGRAMS = {
+  bigrams: [
+    "it is", "this is", "there are", "there is", "we can", "you can",
+    "in order", "as well", "such as", "due to", "based on", "in the",
+    "of the", "to the", "for the", "on the", "by the", "with the",
+    "is a", "are a", "was a", "be a", "as a", "have a",
+    "important to", "necessary to", "essential to", "crucial to",
+    "ability to", "order to", "need to", "want to", "have to",
+    "can be", "will be", "would be", "could be", "should be", "must be",
+  ],
+  trigrams: [
+    "it is important", "it is essential", "it is crucial", "it is necessary",
+    "in order to", "as well as", "due to the", "based on the",
+    "one of the", "some of the", "many of the", "most of the",
+    "the fact that", "in the context", "on the other", "at the same",
+    "is one of", "are some of", "is a key", "plays a crucial",
+    "plays a vital", "plays an important", "in this article",
+    "in this essay", "we will explore", "let us delve", "let's explore",
+    "when it comes", "it comes to", "comes to the",
+  ],
+};
+
+// Expected frequencies for human writing (approximate)
+const HUMAN_NGRAM_BASELINE = {
+  bigramRate: 15, // per 100 words
+  trigramRate: 3,  // per 100 words
+};
+
 function countSyllables(word) {
   word = word.toLowerCase().replace(/[^a-z]/g, "");
   if (word.length <= 3) return 1;
@@ -152,10 +147,9 @@ function countSyllables(word) {
 
 function analyzeSentences(text) {
   const sentences = text.match(/[^\.!\?]+[\.!\?]+|[^\.!\?]+$/g) || [];
-
   return sentences
     .map((s, i) => {
-      const words = s.trim().match(/[a-z]+(?:['’][a-z]+)?/gi) || [];
+      const words = s.trim().match(/[a-z]+(?:[''][a-z]+)?/gi) || [];
       const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
       return {
         index: i + 1,
@@ -168,14 +162,10 @@ function analyzeSentences(text) {
 }
 
 function calculateSentenceStats(sentences) {
-  if (sentences.length === 0)
-    return { mean: 0, min: 0, max: 0, stdDev: 0, total: 0 };
+  if (sentences.length === 0) return { mean: 0, min: 0, max: 0, stdDev: 0, total: 0 };
   const lengths = sentences.map((s) => s.wordCount);
   const mean = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-  const variance =
-    lengths.reduce((sum, len) => sum + Math.pow(len - mean, 2), 0) /
-    lengths.length;
-
+  const variance = lengths.reduce((sum, len) => sum + Math.pow(len - mean, 2), 0) / lengths.length;
   return {
     mean: mean.toFixed(1),
     min: Math.min(...lengths),
@@ -187,27 +177,19 @@ function calculateSentenceStats(sentences) {
 
 function calculateReadability(sentences, totalWords) {
   if (sentences.length === 0 || totalWords === 0) return { score: 0, grade: 0 };
-
   const totalSyllables = sentences.reduce((sum, s) => sum + s.syllableCount, 0);
   const avgSentenceLength = totalWords / sentences.length;
   const avgSyllablesPerWord = totalSyllables / totalWords;
-
   let score = 206.835 - 1.015 * avgSentenceLength - 84.6 * avgSyllablesPerWord;
   score = Math.max(0, Math.min(100, score));
-
   let grade = 0.39 * avgSentenceLength + 11.8 * avgSyllablesPerWord - 15.59;
   grade = Math.max(0, grade);
-
-  return {
-    score: score.toFixed(1),
-    grade: grade.toFixed(1),
-  };
+  return { score: score.toFixed(1), grade: grade.toFixed(1) };
 }
 
 function analyzeVocabulary(text) {
-  const words = text.toLowerCase().match(/[a-z]+(?:['’][a-z]+)?/g) || [];
+  const words = text.toLowerCase().match(/[a-z]+(?:[''][a-z]+)?/g) || [];
   const uniqueWords = new Set(words);
-
   const ttr = words.length > 0 ? uniqueWords.size / words.length : 0;
 
   let ttrSum = 0;
@@ -225,11 +207,8 @@ function analyzeVocabulary(text) {
   }
   const sTTR = chunks > 0 ? ttrSum / chunks : ttr;
 
-  const sophisticatedWords = words.filter(
-    (w) => w.length >= 6 && !HIGH_FREQUENCY_WORDS.has(w)
-  );
-  const sophisticationRatio =
-    words.length > 0 ? (sophisticatedWords.length / words.length) * 100 : 0;
+  const sophisticatedWords = words.filter((w) => w.length >= 6 && !HIGH_FREQUENCY_WORDS.has(w));
+  const sophisticationRatio = words.length > 0 ? (sophisticatedWords.length / words.length) * 100 : 0;
 
   return {
     totalWords: words.length,
@@ -243,7 +222,6 @@ function analyzeVocabulary(text) {
 function analyzeConnectives(text) {
   const results = {};
   let totalConnectives = 0;
-
   Object.entries(CONNECTIVES).forEach(([category, words]) => {
     const found = [];
     words.forEach((word) => {
@@ -256,49 +234,205 @@ function analyzeConnectives(text) {
     });
     results[category] = found;
   });
-
   return { byCategory: results, total: totalConnectives };
 }
 
+// IMPROVEMENT 1: Enhanced formal register analysis with weighted scoring
 function analyzeFormalRegister(text) {
   const found = [];
+  let totalWeight = 0;
+  
   FORMAL_REGISTER_PHRASES.forEach((item) => {
     const regex = new RegExp(`\\b${item.phrase}\\b`, "gi");
     const matches = text.match(regex);
     if (matches) {
-      found.push({ ...item, count: matches.length });
+      const count = matches.length;
+      const weightedScore = count * item.weight;
+      totalWeight += weightedScore;
+      found.push({ ...item, count, weightedScore });
     }
   });
-  return found.sort((a, b) => b.count - a.count);
+  
+  // Calculate severity levels
+  const highSeverity = found.filter(f => f.weight === 3);
+  const mediumSeverity = found.filter(f => f.weight === 2);
+  const lowSeverity = found.filter(f => f.weight === 1);
+  
+  return {
+    phrases: found.sort((a, b) => b.weightedScore - a.weightedScore),
+    totalWeight,
+    totalCount: found.reduce((sum, f) => sum + f.count, 0),
+    severity: {
+      high: highSeverity.reduce((sum, f) => sum + f.count, 0),
+      medium: mediumSeverity.reduce((sum, f) => sum + f.count, 0),
+      low: lowSeverity.reduce((sum, f) => sum + f.count, 0),
+    }
+  };
+}
+
+// IMPROVEMENT 2: N-gram analysis
+function analyzeNgrams(text) {
+  const words = text.toLowerCase().match(/[a-z]+(?:[''][a-z]+)?/g) || [];
+  const totalWords = words.length;
+  
+  if (totalWords < 10) {
+    return {
+      bigrams: { found: [], count: 0, rate: 0, excess: 0 },
+      trigrams: { found: [], count: 0, rate: 0, excess: 0 },
+      predictabilityScore: 0,
+    };
+  }
+  
+  // Build actual bigrams and trigrams from text
+  const textBigrams = [];
+  const textTrigrams = [];
+  
+  for (let i = 0; i < words.length - 1; i++) {
+    textBigrams.push(`${words[i]} ${words[i + 1]}`);
+  }
+  for (let i = 0; i < words.length - 2; i++) {
+    textTrigrams.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`);
+  }
+  
+  // Count formulaic n-grams
+  const bigramCounts = {};
+  const trigramCounts = {};
+  
+  FORMULAIC_NGRAMS.bigrams.forEach(bg => {
+    const count = textBigrams.filter(tb => tb === bg).length;
+    if (count > 0) bigramCounts[bg] = count;
+  });
+  
+  FORMULAIC_NGRAMS.trigrams.forEach(tg => {
+    const count = textTrigrams.filter(tt => tt === tg).length;
+    if (count > 0) trigramCounts[tg] = count;
+  });
+  
+  const bigramTotal = Object.values(bigramCounts).reduce((a, b) => a + b, 0);
+  const trigramTotal = Object.values(trigramCounts).reduce((a, b) => a + b, 0);
+  
+  const bigramRate = (bigramTotal / totalWords) * 100;
+  const trigramRate = (trigramTotal / totalWords) * 100;
+  
+  // Calculate excess over human baseline
+  const bigramExcess = Math.max(0, bigramRate - HUMAN_NGRAM_BASELINE.bigramRate);
+  const trigramExcess = Math.max(0, trigramRate - HUMAN_NGRAM_BASELINE.trigramRate);
+  
+  // Predictability score (0-100, higher = more formulaic)
+  const predictabilityScore = Math.min(100, (bigramExcess * 2 + trigramExcess * 5));
+  
+  return {
+    bigrams: {
+      found: Object.entries(bigramCounts).map(([phrase, count]) => ({ phrase, count })).sort((a, b) => b.count - a.count),
+      count: bigramTotal,
+      rate: bigramRate.toFixed(1),
+      excess: bigramExcess.toFixed(1),
+    },
+    trigrams: {
+      found: Object.entries(trigramCounts).map(([phrase, count]) => ({ phrase, count })).sort((a, b) => b.count - a.count),
+      count: trigramTotal,
+      rate: trigramRate.toFixed(1),
+      excess: trigramExcess.toFixed(1),
+    },
+    predictabilityScore: predictabilityScore.toFixed(0),
+  };
+}
+
+// IMPROVEMENT 3: Paragraph-level analysis
+function analyzeParagraphs(text) {
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  
+  if (paragraphs.length === 0) {
+    return {
+      count: 0,
+      avgSentencesPerPara: 0,
+      avgWordsPerPara: 0,
+      coherenceScore: 0,
+      topicShiftScore: 0,
+      paragraphDetails: [],
+    };
+  }
+  
+  const paragraphDetails = paragraphs.map((para, idx) => {
+    const sentences = para.match(/[^\.!\?]+[\.!\?]+|[^\.!\?]+$/g) || [];
+    const words = para.toLowerCase().match(/[a-z]+(?:[''][a-z]+)?/g) || [];
+    const contentWords = words.filter(w => !HIGH_FREQUENCY_WORDS.has(w) && w.length > 3);
+    
+    // Get opening word/phrase
+    const firstSentence = sentences[0] || "";
+    const openingWords = firstSentence.trim().split(/\s+/).slice(0, 3).join(" ");
+    
+    // Check for transition at start
+    const allConnectives = Object.values(CONNECTIVES).flat();
+    const hasTransition = allConnectives.some(c => 
+      firstSentence.toLowerCase().trim().startsWith(c + " ") || 
+      firstSentence.toLowerCase().trim().startsWith(c + ",")
+    );
+    
+    return {
+      index: idx + 1,
+      sentenceCount: sentences.filter(s => s.trim()).length,
+      wordCount: words.length,
+      contentWords: contentWords.slice(0, 10), // Top content words
+      openingWords,
+      hasTransition,
+    };
+  });
+  
+  // Calculate coherence: do adjacent paragraphs share content words?
+  let sharedWordCount = 0;
+  let transitions = 0;
+  
+  for (let i = 1; i < paragraphDetails.length; i++) {
+    const prevWords = new Set(paragraphDetails[i - 1].contentWords);
+    const currWords = paragraphDetails[i].contentWords;
+    const shared = currWords.filter(w => prevWords.has(w)).length;
+    sharedWordCount += shared;
+    if (paragraphDetails[i].hasTransition) transitions++;
+  }
+  
+  const avgShared = paragraphDetails.length > 1 ? sharedWordCount / (paragraphDetails.length - 1) : 0;
+  const transitionRate = paragraphDetails.length > 1 ? (transitions / (paragraphDetails.length - 1)) * 100 : 0;
+  
+  // Coherence score based on shared vocabulary and transitions
+  const coherenceScore = Math.min(100, avgShared * 20 + transitionRate * 0.5);
+  
+  // Topic shift detection: low shared words + no transitions = abrupt shifts
+  const topicShiftScore = paragraphDetails.length > 1 
+    ? Math.max(0, 100 - coherenceScore) 
+    : 0;
+  
+  const totalSentences = paragraphDetails.reduce((sum, p) => sum + p.sentenceCount, 0);
+  const totalWords = paragraphDetails.reduce((sum, p) => sum + p.wordCount, 0);
+  
+  return {
+    count: paragraphs.length,
+    avgSentencesPerPara: (totalSentences / paragraphs.length).toFixed(1),
+    avgWordsPerPara: (totalWords / paragraphs.length).toFixed(1),
+    coherenceScore: coherenceScore.toFixed(0),
+    topicShiftScore: topicShiftScore.toFixed(0),
+    transitionRate: transitionRate.toFixed(0),
+    paragraphDetails,
+  };
 }
 
 function analyzeVariation(sentences) {
   if (sentences.length < 2) return { cv: 0 };
-
   const lengths = sentences.map((s) => s.wordCount);
   const mean = lengths.reduce((a, b) => a + b, 0) / lengths.length;
-  const variance =
-    lengths.reduce((sum, len) => sum + Math.pow(len - mean, 2), 0) /
-    lengths.length;
+  const variance = lengths.reduce((sum, len) => sum + Math.pow(len - mean, 2), 0) / lengths.length;
   const stdDev = Math.sqrt(variance);
-
   const cv = mean > 0 ? (stdDev / mean) * 100 : 0;
-
   return { cv: cv.toFixed(1) };
 }
 
 function analyzePassiveVoice(text) {
-  const passivePatterns =
-    /\b(is|are|was|were|been|being|be)\s+(\w+ed|written|spoken|taken|given|made|done|seen|known|found|thought|begun|broken|chosen|driven|eaten|fallen|forgotten|frozen|gotten|grown|hidden|ridden|risen|shaken|stolen|thrown|worn)\b/gi;
+  const passivePatterns = /\b(is|are|was|were|been|being|be)\s+(\w+ed|written|spoken|taken|given|made|done|seen|known|found|thought|begun|broken|chosen|driven|eaten|fallen|forgotten|frozen|gotten|grown|hidden|ridden|risen|shaken|stolen|thrown|worn)\b/gi;
   const matches = text.match(passivePatterns) || [];
   const sentences = text.match(/[^\.!\?]+[\.!\?]+|[^\.!\?]+$/g) || [];
-
   return {
     count: matches.length,
-    ratio:
-      sentences.length > 0
-        ? ((matches.length / sentences.length) * 100).toFixed(1)
-        : 0,
+    ratio: sentences.length > 0 ? ((matches.length / sentences.length) * 100).toFixed(1) : 0,
   };
 }
 
@@ -308,9 +442,11 @@ function runFullAnalysis(text) {
   const vocabulary = analyzeVocabulary(text);
   const readability = calculateReadability(sentences, vocabulary.totalWords);
   const connectives = analyzeConnectives(text);
-  const formalPhrases = analyzeFormalRegister(text);
+  const formalRegister = analyzeFormalRegister(text);
   const variation = analyzeVariation(sentences);
   const passive = analyzePassiveVoice(text);
+  const ngrams = analyzeNgrams(text);
+  const paragraphs = analyzeParagraphs(text);
 
   return {
     text,
@@ -319,18 +455,18 @@ function runFullAnalysis(text) {
     vocabulary,
     readability,
     connectives,
-    formalPhrases,
+    formalPhrases: formalRegister.phrases,
+    formalRegister,
     variation,
     passive,
+    ngrams,
+    paragraphs,
   };
 }
 
-const MetricCard = ({ value, label, sublabel, warning }) => (
-  <div className="metric-card">
-    <div
-      className="metric-value"
-      style={{ color: warning ? "#e67e22" : "#2C3E50" }}
-    >
+const MetricCard = ({ value, label, sublabel, warning, tooltip }) => (
+  <div className="metric-card" title={tooltip}>
+    <div className="metric-value" style={{ color: warning ? "#e67e22" : "#2C3E50" }}>
       {value}
     </div>
     <div className="metric-label">{label}</div>
@@ -351,14 +487,18 @@ const TextHighlighter = ({ text, mode }) => {
       regex = new RegExp(`(${phrases})`, "gi");
       className = "highlight-formal";
     } else if (mode === "passive") {
-      regex =
-        /\b((?:is|are|was|were|been|being|be)\s+(?:\w+ed|written|spoken|taken|given|made|done|seen|known|found|thought|begun|broken|chosen|driven|eaten|fallen|forgotten|frozen|gotten|grown|hidden|ridden|risen|shaken|stolen|thrown|worn))\b/gi;
+      regex = /\b((?:is|are|was|were|been|being|be)\s+(?:\w+ed|written|spoken|taken|given|made|done|seen|known|found|thought|begun|broken|chosen|driven|eaten|fallen|forgotten|frozen|gotten|grown|hidden|ridden|risen|shaken|stolen|thrown|worn))\b/gi;
       className = "highlight-passive";
     } else if (mode === "connectives") {
       const allConnectives = Object.values(CONNECTIVES).flat();
       const pattern = allConnectives.map((w) => `\\b${w}\\b`).join("|");
       regex = new RegExp(`(${pattern})`, "gi");
       className = "highlight-connective";
+    } else if (mode === "ngrams") {
+      const allNgrams = [...FORMULAIC_NGRAMS.trigrams, ...FORMULAIC_NGRAMS.bigrams];
+      const pattern = allNgrams.map(ng => ng.replace(/\s+/g, "\\s+")).join("|");
+      regex = new RegExp(`(${pattern})`, "gi");
+      className = "highlight-ngram";
     }
 
     const split = text.split(regex);
@@ -381,16 +521,120 @@ const TextHighlighter = ({ text, mode }) => {
   return <div className="highlighter-container">{getHighlightedText()}</div>;
 };
 
+// IMPROVEMENT 4: Profile export/import component
+const ProfileManager = ({ samples, onImport, studentName, onNameChange }) => {
+  const fileInputRef = useRef(null);
+  
+  const handleExport = () => {
+    if (samples.length === 0) {
+      alert("No samples to export. Add some baseline samples first.");
+      return;
+    }
+    
+    const profile = {
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      studentName: studentName || "Unnamed Student",
+      sampleCount: samples.length,
+      samples: samples.map(s => ({
+        id: s.id,
+        textPreview: s.text,
+        wordCount: s.data.vocabulary.totalWords,
+        metrics: {
+          grade: s.data.readability.grade,
+          cv: s.data.variation.cv,
+          sTTR: s.data.vocabulary.sTTR,
+          sophistication: s.data.vocabulary.sophisticationRatio,
+          formalWeight: s.data.formalRegister?.totalWeight || 0,
+          predictability: s.data.ngrams?.predictabilityScore || 0,
+          coherence: s.data.paragraphs?.coherenceScore || 0,
+        },
+        fullData: s.data,
+      })),
+    };
+    
+    const blob = new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clareo-profile-${(studentName || "student").replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const profile = JSON.parse(event.target.result);
+        
+        if (!profile.version || !profile.samples) {
+          throw new Error("Invalid profile format");
+        }
+        
+        const importedSamples = profile.samples.map(s => ({
+          id: Date.now() + Math.random(),
+          text: s.textPreview,
+          data: s.fullData,
+        }));
+        
+        onImport(importedSamples, profile.studentName);
+        alert(`Imported ${importedSamples.length} samples for "${profile.studentName}"`);
+      } catch (err) {
+        alert("Failed to import profile: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+  
+  return (
+    <div className="profile-manager">
+      <div className="profile-name-input">
+        <label>Student Name:</label>
+        <input
+          type="text"
+          placeholder="Enter student name..."
+          value={studentName}
+          onChange={(e) => onNameChange(e.target.value)}
+        />
+      </div>
+      <div className="profile-actions">
+        <button className="btn btn-outline" onClick={handleExport}>
+          ↓ Export Profile
+        </button>
+        <button className="btn btn-outline" onClick={() => fileInputRef.current?.click()}>
+          ↑ Import Profile
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: "none" }}
+          onChange={handleImport}
+        />
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [activeSection, setActiveSection] = useState("analysis");
   const [analysisText, setAnalysisText] = useState("");
   const [results, setResults] = useState(null);
   const [highlightMode, setHighlightMode] = useState("none");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [baselineInput, setBaselineInput] = useState("");
   const [baselineSamples, setBaselineSamples] = useState([]);
   const [comparisonText, setComparisonText] = useState("");
   const [comparisonResult, setComparisonResult] = useState(null);
+  const [studentName, setStudentName] = useState("");
 
   const handleAnalyze = () => {
     if (!analysisText.trim()) return;
@@ -403,11 +647,7 @@ export default function App() {
     const analysis = runFullAnalysis(baselineInput);
 
     if (analysis.vocabulary.totalWords < 100) {
-      if (
-        !window.confirm(
-          "This sample is very short (<100 words) and might skew your baseline data. Add it anyway?"
-        )
-      ) {
+      if (!window.confirm("This sample is very short (<100 words) and might skew your baseline data. Add it anyway?")) {
         return;
       }
     }
@@ -427,6 +667,11 @@ export default function App() {
     setBaselineSamples(baselineSamples.filter((s) => s.id !== id));
   };
 
+  const handleProfileImport = (samples, name) => {
+    setBaselineSamples(samples);
+    if (name) setStudentName(name);
+  };
+
   const runComparison = () => {
     if (baselineSamples.length === 0 || !comparisonText.trim()) return;
 
@@ -437,15 +682,19 @@ export default function App() {
       cv: 0,
       sTTR: 0,
       sophistication: 0,
+      formalWeight: 0,
+      predictability: 0,
+      coherence: 0,
     };
 
     baselineSamples.forEach((sample) => {
       profile.grade += parseFloat(sample.data.readability.grade);
       profile.cv += parseFloat(sample.data.variation.cv);
       profile.sTTR += parseFloat(sample.data.vocabulary.sTTR);
-      profile.sophistication += parseFloat(
-        sample.data.vocabulary.sophisticationRatio
-      );
+      profile.sophistication += parseFloat(sample.data.vocabulary.sophisticationRatio);
+      profile.formalWeight += sample.data.formalRegister?.totalWeight || 0;
+      profile.predictability += parseFloat(sample.data.ngrams?.predictabilityScore || 0);
+      profile.coherence += parseFloat(sample.data.paragraphs?.coherenceScore || 0);
     });
 
     const count = baselineSamples.length;
@@ -454,6 +703,9 @@ export default function App() {
       cv: (profile.cv / count).toFixed(1),
       sTTR: (profile.sTTR / count).toFixed(1),
       sophistication: (profile.sophistication / count).toFixed(1),
+      formalWeight: (profile.formalWeight / count).toFixed(1),
+      predictability: (profile.predictability / count).toFixed(0),
+      coherence: (profile.coherence / count).toFixed(0),
     };
 
     setComparisonResult({
@@ -467,7 +719,7 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=DM+Sans:wght@400;500;700&display=swap');
         
-        :root { --primary: #00B8D9; --bg: #F4F7FA; --text: #2C3E50; }
+        :root { --primary: #00B8D9; --bg: #F4F7FA; --text: #2C3E50; --accent: #FF6B6B; --success: #27ae60; }
         * { box-sizing: border-box; }
         
         :root, body, #root {
@@ -522,6 +774,7 @@ export default function App() {
 
         .panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         h2 { margin-top: 0; font-family: 'Cormorant Garamond', serif; color: var(--primary); }
+        h3 { font-size: 14px; color: #666; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 1px; }
         
         textarea { 
           width: 100%; 
@@ -540,14 +793,18 @@ export default function App() {
         .btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: 12px; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-outline { background: transparent; border: 1px solid #ccc; color: #666; margin-right: 10px; }
+        .btn-small { padding: 6px 12px; font-size: 11px; }
         
         .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
-        .metric-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        .metrics-row-5 { grid-template-columns: repeat(5, 1fr); }
+        .metric-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; cursor: help; transition: transform 0.2s; }
+        .metric-card:hover { transform: translateY(-2px); }
         .metric-value { font-size: 24px; font-weight: 700; color: var(--text); }
         .metric-label { font-size: 11px; text-transform: uppercase; color: #888; margin-top: 5px; }
+        .metric-sublabel { font-size: 10px; color: #aaa; margin-top: 3px; }
         .metric-warning { font-size: 10px; color: #e67e22; margin-top: 5px; }
         
-        .highlighter-controls { display: flex; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .highlighter-controls { display: flex; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; flex-wrap: wrap; }
         
         .highlighter-btn { 
           padding: 6px 12px; 
@@ -565,6 +822,7 @@ export default function App() {
         .highlight-formal { background-color: #d1e7dd; color: #0f5132; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
         .highlight-passive { background-color: #fff3cd; color: #664d03; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
         .highlight-connective { background-color: #cff4fc; color: #055160; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-ngram { background-color: #f8d7da; color: #842029; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
         
         .baseline-list { margin-bottom: 20px; max-height: 150px; overflow-y: auto; }
         .baseline-item { display: flex; justify-content: space-between; padding: 10px; background: #f8f9fa; margin-bottom: 5px; border-radius: 6px; font-size: 13px; }
@@ -577,6 +835,29 @@ export default function App() {
         .diff-neg { color: #c0392b; font-weight: bold; }
         
         .warning-box { background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        
+        .severity-breakdown { display: flex; gap: 15px; margin-top: 10px; font-size: 12px; }
+        .severity-item { display: flex; align-items: center; gap: 5px; }
+        .severity-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .severity-high { background: #e74c3c; }
+        .severity-medium { background: #f39c12; }
+        .severity-low { background: #3498db; }
+        
+        .advanced-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .toggle-advanced { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+        
+        .ngram-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .ngram-tag { background: #f8d7da; color: #842029; padding: 4px 10px; border-radius: 15px; font-size: 11px; }
+        
+        .paragraph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px; margin-top: 10px; }
+        .para-block { background: #e8f4f8; padding: 8px; border-radius: 6px; text-align: center; font-size: 11px; }
+        .para-block.has-transition { border-left: 3px solid var(--primary); }
+        
+        .profile-manager { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .profile-name-input { margin-bottom: 10px; }
+        .profile-name-input label { font-size: 12px; color: #666; display: block; margin-bottom: 5px; }
+        .profile-name-input input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; }
+        .profile-actions { display: flex; gap: 10px; }
         
         .references { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
         .references h3 { font-size: 14px; color: var(--text); margin-bottom: 10px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 1px; }
@@ -613,96 +894,106 @@ export default function App() {
                 value={analysisText}
                 onChange={(e) => setAnalysisText(e.target.value)}
               />
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "12px", color: "#888" }}>
                   {analysisText.split(/\s+/).filter((w) => w).length} words
                 </span>
-                <button
-                  className="btn"
-                  onClick={handleAnalyze}
-                  disabled={!analysisText.trim()}
-                >
+                <button className="btn" onClick={handleAnalyze} disabled={!analysisText.trim()}>
                   Run Analysis
                 </button>
               </div>
 
               {results && results.vocabulary.totalWords < 100 && (
                 <div className="warning-box" style={{ marginTop: "15px" }}>
-                  <strong>Short Text Warning:</strong> This text is under 100
-                  words. Metrics like Grade Level and Variation may be unreliable.
+                  <strong>Short Text Warning:</strong> This text is under 100 words. Metrics may be unreliable.
                 </div>
               )}
             </div>
 
             <div className="panel">
               {!results ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    color: "#888",
-                    paddingTop: "80px",
-                  }}
-                >
+                <div style={{ textAlign: "center", color: "#888", paddingTop: "80px" }}>
                   Enter text and analyze to see metrics.
                 </div>
               ) : (
                 <>
-                  <div className="metrics-row">
+                  <div className="metrics-row metrics-row-5">
                     <MetricCard
                       value={results.readability.grade}
                       label="Grade Level"
+                      tooltip="Flesch-Kincaid Grade Level"
                     />
                     <MetricCard
                       value={`${results.variation.cv}%`}
                       label="Sentence Var"
                       sublabel="Low < 25%"
+                      tooltip="Coefficient of Variation in sentence length"
                     />
                     <MetricCard
                       value={`${results.vocabulary.sTTR}%`}
                       label="Vocab Variety"
                       sublabel="Std. TTR"
+                      tooltip="Standardized Type-Token Ratio"
                     />
                     <MetricCard
-                      value={results.formalPhrases.length}
-                      label="Formal Phrases"
+                      value={results.formalRegister.totalWeight}
+                      label="Formulaic"
+                      sublabel={`${results.formalRegister.totalCount} phrases`}
+                      warning={results.formalRegister.totalWeight > 10 ? "High" : null}
+                      tooltip="Weighted score of formulaic/stock phrases"
                     />
+                    <MetricCard
+                      value={`${results.ngrams.predictabilityScore}%`}
+                      label="Predictability"
+                      sublabel="N-gram score"
+                      warning={parseInt(results.ngrams.predictabilityScore) > 30 ? "Elevated" : null}
+                      tooltip="Based on common formulaic n-gram patterns"
+                    />
+                  </div>
+
+                  {/* Severity breakdown */}
+                  <div className="severity-breakdown">
+                    <div className="severity-item">
+                      <span className="severity-dot severity-high"></span>
+                      <span>High: {results.formalRegister.severity.high}</span>
+                    </div>
+                    <div className="severity-item">
+                      <span className="severity-dot severity-medium"></span>
+                      <span>Medium: {results.formalRegister.severity.medium}</span>
+                    </div>
+                    <div className="severity-item">
+                      <span className="severity-dot severity-low"></span>
+                      <span>Low: {results.formalRegister.severity.low}</span>
+                    </div>
                   </div>
 
                   <div className="highlighter-controls">
                     <button
-                      className={`highlighter-btn ${
-                        highlightMode === "none" ? "active" : ""
-                      }`}
+                      className={`highlighter-btn ${highlightMode === "none" ? "active" : ""}`}
                       onClick={() => setHighlightMode("none")}
                     >
                       None
                     </button>
                     <button
-                      className={`highlighter-btn ${
-                        highlightMode === "formal" ? "active" : ""
-                      }`}
+                      className={`highlighter-btn ${highlightMode === "formal" ? "active" : ""}`}
                       onClick={() => setHighlightMode("formal")}
                     >
-                      Formal ({results.formalPhrases.length})
+                      Formulaic ({results.formalRegister.totalCount})
                     </button>
                     <button
-                      className={`highlighter-btn ${
-                        highlightMode === "passive" ? "active" : ""
-                      }`}
+                      className={`highlighter-btn ${highlightMode === "ngrams" ? "active" : ""}`}
+                      onClick={() => setHighlightMode("ngrams")}
+                    >
+                      N-grams ({results.ngrams.bigrams.count + results.ngrams.trigrams.count})
+                    </button>
+                    <button
+                      className={`highlighter-btn ${highlightMode === "passive" ? "active" : ""}`}
                       onClick={() => setHighlightMode("passive")}
                     >
                       Passive ({results.passive.count})
                     </button>
                     <button
-                      className={`highlighter-btn ${
-                        highlightMode === "connectives" ? "active" : ""
-                      }`}
+                      className={`highlighter-btn ${highlightMode === "connectives" ? "active" : ""}`}
                       onClick={() => setHighlightMode("connectives")}
                     >
                       Connectives ({results.connectives.total})
@@ -711,18 +1002,84 @@ export default function App() {
 
                   <TextHighlighter text={results.text} mode={highlightMode} />
 
-                  <div
-                    style={{
-                      marginTop: "15px",
-                      fontSize: "12px",
-                      color: "#666",
-                      lineHeight: "1.5",
-                    }}
-                  >
+                  {/* Advanced section toggle */}
+                  <div className="advanced-section">
+                    <button className="toggle-advanced" onClick={() => setShowAdvanced(!showAdvanced)}>
+                      {showAdvanced ? "▼" : "▶"} Advanced Analysis
+                    </button>
+                    
+                    {showAdvanced && (
+                      <>
+                        {/* Paragraph Analysis */}
+                        <h3>Paragraph Flow</h3>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "15px" }}>
+                          <div className="metric-card" style={{ padding: "10px" }}>
+                            <div className="metric-value" style={{ fontSize: "18px" }}>{results.paragraphs.count}</div>
+                            <div className="metric-label">Paragraphs</div>
+                          </div>
+                          <div className="metric-card" style={{ padding: "10px" }}>
+                            <div className="metric-value" style={{ fontSize: "18px" }}>{results.paragraphs.coherenceScore}%</div>
+                            <div className="metric-label">Coherence</div>
+                          </div>
+                          <div className="metric-card" style={{ padding: "10px" }}>
+                            <div className="metric-value" style={{ fontSize: "18px" }}>{results.paragraphs.transitionRate}%</div>
+                            <div className="metric-label">Transition Rate</div>
+                          </div>
+                        </div>
+                        
+                        <div className="paragraph-grid">
+                          {results.paragraphs.paragraphDetails.map((p) => (
+                            <div key={p.index} className={`para-block ${p.hasTransition ? "has-transition" : ""}`} title={`Opens: "${p.openingWords}..."`}>
+                              <div style={{ fontWeight: "bold" }}>¶{p.index}</div>
+                              <div>{p.sentenceCount}s / {p.wordCount}w</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Top N-grams */}
+                        {(results.ngrams.trigrams.found.length > 0 || results.ngrams.bigrams.found.length > 0) && (
+                          <>
+                            <h3>Common N-gram Patterns</h3>
+                            <div className="ngram-list">
+                              {results.ngrams.trigrams.found.slice(0, 5).map((ng, i) => (
+                                <span key={`tri-${i}`} className="ngram-tag">{ng.phrase} ×{ng.count}</span>
+                              ))}
+                              {results.ngrams.bigrams.found.slice(0, 5).map((ng, i) => (
+                                <span key={`bi-${i}`} className="ngram-tag">{ng.phrase} ×{ng.count}</span>
+                              ))}
+                            </div>
+                          </>
+                        )}
+
+                        {/* Top formal phrases */}
+                        {results.formalPhrases.length > 0 && (
+                          <>
+                            <h3>Top Weighted Phrases</h3>
+                            <div style={{ fontSize: "12px", lineHeight: "1.8" }}>
+                              {results.formalPhrases.slice(0, 8).map((p, i) => (
+                                <span key={i} style={{ marginRight: "15px" }}>
+                                  <strong>{p.phrase}</strong> 
+                                  <span style={{ color: "#888" }}> (×{p.count}, wt:{p.weightedScore})</span>
+                                </span>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: "15px", fontSize: "12px", color: "#666", lineHeight: "1.5" }}>
                     <strong>Interpretation:</strong>
                     {parseFloat(results.variation.cv) < 25
-                      ? " This text has very uniform sentence lengths (robotic rhythm)."
-                      : " This text shows natural variation in sentence length."}
+                      ? " Uniform sentence lengths suggest robotic rhythm."
+                      : " Natural variation in sentence length."}
+                    {parseInt(results.ngrams.predictabilityScore) > 30
+                      ? " Elevated predictability from common formulaic patterns."
+                      : ""}
+                    {results.formalRegister.severity.high > 2
+                      ? " Multiple high-severity stock phrases detected."
+                      : ""}
                   </div>
                 </>
               )}
@@ -734,9 +1091,16 @@ export default function App() {
           <div className="grid">
             <div className="panel">
               <h2>1. Build Student Profile</h2>
-              <p
-                style={{ fontSize: "13px", color: "#666", marginBottom: "15px" }}
-              >
+              
+              {/* Profile Manager */}
+              <ProfileManager
+                samples={baselineSamples}
+                onImport={handleProfileImport}
+                studentName={studentName}
+                onNameChange={setStudentName}
+              />
+              
+              <p style={{ fontSize: "13px", color: "#666", marginBottom: "15px" }}>
                 Add 3+ past assignments to create a reliable baseline average.
               </p>
 
@@ -746,32 +1110,19 @@ export default function App() {
                 value={baselineInput}
                 onChange={(e) => setBaselineInput(e.target.value)}
               />
-              <button
-                className="btn btn-outline"
-                onClick={addBaselineSample}
-                disabled={!baselineInput.trim()}
-              >
+              <button className="btn btn-outline" onClick={addBaselineSample} disabled={!baselineInput.trim()}>
                 + Add Sample
               </button>
 
               <div className="baseline-list" style={{ marginTop: "20px" }}>
                 {baselineSamples.map((s, i) => (
                   <div key={s.id} className="baseline-item">
-                    <span>
-                      Sample {i + 1} ({s.data.vocabulary.totalWords} words)
-                    </span>
-                    <button
-                      className="remove-btn"
-                      onClick={() => removeBaseline(s.id)}
-                    >
-                      ×
-                    </button>
+                    <span>Sample {i + 1} ({s.data.vocabulary.totalWords} words)</span>
+                    <button className="remove-btn" onClick={() => removeBaseline(s.id)}>×</button>
                   </div>
                 ))}
                 {baselineSamples.length === 0 && (
-                  <div style={{ fontStyle: "italic", color: "#ccc" }}>
-                    No samples added yet
-                  </div>
+                  <div style={{ fontStyle: "italic", color: "#ccc" }}>No samples added yet</div>
                 )}
               </div>
             </div>
@@ -804,42 +1155,28 @@ export default function App() {
                   </thead>
                   <tbody>
                     {[
-                      { lbl: "Grade Level", key: "grade", suffix: "" },
-                      { lbl: "Sentence Var (CV)", key: "cv", suffix: "%" },
-                      { lbl: "Vocab (sTTR)", key: "sTTR", suffix: "%" },
-                      {
-                        lbl: "Sophistication",
-                        key: "sophistication",
-                        suffix: "%",
-                      },
+                      { lbl: "Grade Level", key: "grade", suffix: "", accessor: (c) => c.readability.grade },
+                      { lbl: "Sentence Var (CV)", key: "cv", suffix: "%", accessor: (c) => c.variation.cv },
+                      { lbl: "Vocab (sTTR)", key: "sTTR", suffix: "%", accessor: (c) => c.vocabulary.sTTR },
+                      { lbl: "Sophistication", key: "sophistication", suffix: "%", accessor: (c) => c.vocabulary.sophisticationRatio },
+                      { lbl: "Formulaic (wt)", key: "formalWeight", suffix: "", accessor: (c) => c.formalRegister?.totalWeight || 0 },
+                      { lbl: "Predictability", key: "predictability", suffix: "%", accessor: (c) => c.ngrams?.predictabilityScore || 0 },
+                      { lbl: "Coherence", key: "coherence", suffix: "%", accessor: (c) => c.paragraphs?.coherenceScore || 0 },
                     ].map((m) => {
                       const base = parseFloat(comparisonResult.baseline[m.key]);
-                      const curr = parseFloat(
-                        m.key === "grade"
-                          ? comparisonResult.current.readability.grade
-                          : m.key === "cv"
-                          ? comparisonResult.current.variation.cv
-                          : m.key === "sTTR"
-                          ? comparisonResult.current.vocabulary.sTTR
-                          : comparisonResult.current.vocabulary
-                              .sophisticationRatio
-                      );
+                      const curr = parseFloat(m.accessor(comparisonResult.current));
                       const diff = (curr - base).toFixed(1);
+                      const isWarning = m.key === "formalWeight" || m.key === "predictability";
+                      const diffClass = isWarning 
+                        ? (diff > 0 ? "diff-neg" : "diff-pos")
+                        : (diff > 0 ? "diff-pos" : "diff-neg");
                       return (
                         <tr key={m.key}>
                           <td>{m.lbl}</td>
-                          <td>
-                            {base}
-                            {m.suffix}
-                          </td>
-                          <td>
-                            {curr.toFixed(1)}
-                            {m.suffix}
-                          </td>
-                          <td className={diff > 0 ? "diff-pos" : "diff-neg"}>
-                            {diff > 0 ? "+" : ""}
-                            {diff}
-                            {m.suffix}
+                          <td>{base}{m.suffix}</td>
+                          <td>{curr.toFixed(1)}{m.suffix}</td>
+                          <td className={Math.abs(diff) > 5 ? diffClass : ""}>
+                            {diff > 0 ? "+" : ""}{diff}{m.suffix}
                           </td>
                         </tr>
                       );
@@ -848,18 +1185,8 @@ export default function App() {
                 </table>
               )}
               {comparisonResult && (
-                <div
-                  style={{
-                    marginTop: "15px",
-                    background: "#eef",
-                    padding: "10px",
-                    borderRadius: "6px",
-                    fontSize: "12px",
-                  }}
-                >
-                  <strong>Tip:</strong> Significant jumps in "Sophistication"
-                  combined with a drop in "Sentence Var" often indicate a shift in
-                  writing style.
+                <div style={{ marginTop: "15px", background: "#eef", padding: "10px", borderRadius: "6px", fontSize: "12px" }}>
+                  <strong>Tip:</strong> Watch for simultaneous jumps in "Formulaic" and "Predictability" combined with drops in "Sentence Var" — these patterns suggest a shift away from the student's natural voice.
                 </div>
               )}
             </div>
@@ -870,20 +1197,19 @@ export default function App() {
       <div className="references">
         <h3>Methodology & Academic References</h3>
         <div className="ref-item">
-          <strong>Readability:</strong> Flesch, R. (1948).{" "}
-          <em>A new readability yardstick.</em> Journal of Applied Psychology. /
-          Kincaid, J. P., et al. (1975).{" "}
-          <em>Derivation of new readability formulas.</em>
+          <strong>Readability:</strong> Flesch, R. (1948). <em>A new readability yardstick.</em> / Kincaid, J. P., et al. (1975). <em>Derivation of new readability formulas.</em>
         </div>
         <div className="ref-item">
-          <strong>Sentence Variance (CV):</strong> Measures the standard
-          deviation of sentence lengths relative to the mean, a key marker of
-          "natural" writing rhythm vs. robotic uniformity.
+          <strong>Sentence Variance (CV):</strong> Coefficient of variation in sentence lengths — a key marker of natural vs. robotic writing rhythm.
         </div>
         <div className="ref-item">
-          <strong>Vocabulary & Cohesion:</strong> Based on principles from{" "}
-          <em>Coh-Metrix</em> (Graesser, A. C., et al., 2004), analyzing lexical
-          diversity (Type-Token Ratio) and connective density.
+          <strong>Vocabulary & Cohesion:</strong> Based on <em>Coh-Metrix</em> (Graesser, A. C., et al., 2004), analyzing lexical diversity and connective density.
+        </div>
+        <div className="ref-item">
+          <strong>N-gram Analysis:</strong> Detection of predictable phrase patterns common in template-driven or formulaic writing, based on computational linguistics research.
+        </div>
+        <div className="ref-item">
+          <strong>Paragraph Coherence:</strong> Measures topic continuity via shared content words and transition usage between adjacent paragraphs.
         </div>
       </div>
     </div>
