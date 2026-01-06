@@ -1,8 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 
-// IMPROVEMENT 1: Weighted phrase scoring with severity levels
 const FORMAL_REGISTER_PHRASES = [
-  // High severity (weight 3) - Very strong formulaic indicators
   { phrase: "delve into", category: "cliché", weight: 3 },
   { phrase: "delve", category: "cliché", weight: 3 },
   { phrase: "tapestry", category: "cliché", weight: 3 },
@@ -18,7 +16,6 @@ const FORMAL_REGISTER_PHRASES = [
   { phrase: "embark", category: "cliché", weight: 3 },
   { phrase: "embarked on", category: "cliché", weight: 3 },
   
-  // Medium severity (weight 2) - Common formulaic patterns
   { phrase: "dive deep", category: "cliché", weight: 2 },
   { phrase: "testament", category: "cliché", weight: 2 },
   { phrase: "landscape", category: "cliché", weight: 2 },
@@ -51,7 +48,6 @@ const FORMAL_REGISTER_PHRASES = [
   { phrase: "holistic", category: "cliché", weight: 2 },
   { phrase: "paradigm", category: "cliché", weight: 2 },
   
-  // Lower severity (weight 1) - Can appear in human writing but suspicious in clusters
   { phrase: "comprehensive", category: "cliché", weight: 1 },
   { phrase: "crucial", category: "cliché", weight: 1 },
   { phrase: "pivotal", category: "cliché", weight: 1 },
@@ -107,7 +103,6 @@ const HIGH_FREQUENCY_WORDS = new Set([
   "every", "both", "few", "many",
 ]);
 
-// IMPROVEMENT 2: Common formulaic bigrams and trigrams
 const FORMULAIC_NGRAMS = {
   bigrams: [
     "it is", "this is", "there are", "there is", "we can", "you can",
@@ -130,10 +125,9 @@ const FORMULAIC_NGRAMS = {
   ],
 };
 
-// Expected frequencies for human writing (approximate)
 const HUMAN_NGRAM_BASELINE = {
-  bigramRate: 15, // per 100 words
-  trigramRate: 3,  // per 100 words
+  bigramRate: 15,
+  trigramRate: 3,
 };
 
 function countSyllables(word) {
@@ -237,7 +231,6 @@ function analyzeConnectives(text) {
   return { byCategory: results, total: totalConnectives };
 }
 
-// IMPROVEMENT 1: Enhanced formal register analysis with weighted scoring
 function analyzeFormalRegister(text) {
   const found = [];
   let totalWeight = 0;
@@ -253,7 +246,6 @@ function analyzeFormalRegister(text) {
     }
   });
   
-  // Calculate severity levels
   const highSeverity = found.filter(f => f.weight === 3);
   const mediumSeverity = found.filter(f => f.weight === 2);
   const lowSeverity = found.filter(f => f.weight === 1);
@@ -270,7 +262,6 @@ function analyzeFormalRegister(text) {
   };
 }
 
-// IMPROVEMENT 2: N-gram analysis
 function analyzeNgrams(text) {
   const words = text.toLowerCase().match(/[a-z]+(?:[''][a-z]+)?/g) || [];
   const totalWords = words.length;
@@ -283,7 +274,6 @@ function analyzeNgrams(text) {
     };
   }
   
-  // Build actual bigrams and trigrams from text
   const textBigrams = [];
   const textTrigrams = [];
   
@@ -294,7 +284,6 @@ function analyzeNgrams(text) {
     textTrigrams.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`);
   }
   
-  // Count formulaic n-grams
   const bigramCounts = {};
   const trigramCounts = {};
   
@@ -314,11 +303,9 @@ function analyzeNgrams(text) {
   const bigramRate = (bigramTotal / totalWords) * 100;
   const trigramRate = (trigramTotal / totalWords) * 100;
   
-  // Calculate excess over human baseline
   const bigramExcess = Math.max(0, bigramRate - HUMAN_NGRAM_BASELINE.bigramRate);
   const trigramExcess = Math.max(0, trigramRate - HUMAN_NGRAM_BASELINE.trigramRate);
   
-  // Predictability score (0-100, higher = more formulaic)
   const predictabilityScore = Math.min(100, (bigramExcess * 2 + trigramExcess * 5));
   
   return {
@@ -338,7 +325,6 @@ function analyzeNgrams(text) {
   };
 }
 
-// IMPROVEMENT 3: Paragraph-level analysis
 function analyzeParagraphs(text) {
   const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
   
@@ -358,11 +344,9 @@ function analyzeParagraphs(text) {
     const words = para.toLowerCase().match(/[a-z]+(?:[''][a-z]+)?/g) || [];
     const contentWords = words.filter(w => !HIGH_FREQUENCY_WORDS.has(w) && w.length > 3);
     
-    // Get opening word/phrase
     const firstSentence = sentences[0] || "";
     const openingWords = firstSentence.trim().split(/\s+/).slice(0, 3).join(" ");
     
-    // Check for transition at start
     const allConnectives = Object.values(CONNECTIVES).flat();
     const hasTransition = allConnectives.some(c => 
       firstSentence.toLowerCase().trim().startsWith(c + " ") || 
@@ -373,13 +357,12 @@ function analyzeParagraphs(text) {
       index: idx + 1,
       sentenceCount: sentences.filter(s => s.trim()).length,
       wordCount: words.length,
-      contentWords: contentWords.slice(0, 10), // Top content words
+      contentWords: contentWords.slice(0, 10),
       openingWords,
       hasTransition,
     };
   });
   
-  // Calculate coherence: do adjacent paragraphs share content words?
   let sharedWordCount = 0;
   let transitions = 0;
   
@@ -394,10 +377,8 @@ function analyzeParagraphs(text) {
   const avgShared = paragraphDetails.length > 1 ? sharedWordCount / (paragraphDetails.length - 1) : 0;
   const transitionRate = paragraphDetails.length > 1 ? (transitions / (paragraphDetails.length - 1)) * 100 : 0;
   
-  // Coherence score based on shared vocabulary and transitions
   const coherenceScore = Math.min(100, avgShared * 20 + transitionRate * 0.5);
   
-  // Topic shift detection: low shared words + no transitions = abrupt shifts
   const topicShiftScore = paragraphDetails.length > 1 
     ? Math.max(0, 100 - coherenceScore) 
     : 0;
@@ -521,106 +502,208 @@ const TextHighlighter = ({ text, mode }) => {
   return <div className="highlighter-container">{getHighlightedText()}</div>;
 };
 
-// IMPROVEMENT 4: Profile export/import component
-const ProfileManager = ({ samples, onImport, studentName, onNameChange }) => {
-  const fileInputRef = useRef(null);
+const generateAnalysisPDF = (results) => {
+  const printWindow = window.open('', '_blank');
   
-  const handleExport = () => {
-    if (samples.length === 0) {
-      alert("No samples to export. Add some baseline samples first.");
-      return;
-    }
-    
-    const profile = {
-      version: "1.0",
-      exportDate: new Date().toISOString(),
-      studentName: studentName || "Unnamed Student",
-      sampleCount: samples.length,
-      samples: samples.map(s => ({
-        id: s.id,
-        textPreview: s.text,
-        wordCount: s.data.vocabulary.totalWords,
-        metrics: {
-          grade: s.data.readability.grade,
-          cv: s.data.variation.cv,
-          sTTR: s.data.vocabulary.sTTR,
-          sophistication: s.data.vocabulary.sophisticationRatio,
-          formalWeight: s.data.formalRegister?.totalWeight || 0,
-          predictability: s.data.ngrams?.predictabilityScore || 0,
-          coherence: s.data.paragraphs?.coherenceScore || 0,
-        },
-        fullData: s.data,
-      })),
-    };
-    
-    const blob = new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `clareo-profile-${(studentName || "student").replace(/\s+/g, "-").toLowerCase()}-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-  
-  const handleImport = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const profile = JSON.parse(event.target.result);
-        
-        if (!profile.version || !profile.samples) {
-          throw new Error("Invalid profile format");
-        }
-        
-        const importedSamples = profile.samples.map(s => ({
-          id: Date.now() + Math.random(),
-          text: s.textPreview,
-          data: s.fullData,
-        }));
-        
-        onImport(importedSamples, profile.studentName);
-        alert(`Imported ${importedSamples.length} samples for "${profile.studentName}"`);
-      } catch (err) {
-        alert("Failed to import profile: " + err.message);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-  
-  return (
-    <div className="profile-manager">
-      <div className="profile-name-input">
-        <label>Student Name:</label>
-        <input
-          type="text"
-          placeholder="Enter student name..."
-          value={studentName}
-          onChange={(e) => onNameChange(e.target.value)}
-        />
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Clareo Analysis Report</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+        body { font-family: 'DM Sans', sans-serif; padding: 40px; color: #2C3E50; max-width: 800px; margin: 0 auto; }
+        h1 { color: #00B8D9; border-bottom: 2px solid #00B8D9; padding-bottom: 10px; }
+        h2 { color: #2C3E50; margin-top: 30px; font-size: 18px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .metric { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        .metric-value { font-size: 28px; font-weight: 700; color: #2C3E50; }
+        .metric-label { font-size: 11px; text-transform: uppercase; color: #888; margin-top: 5px; }
+        .text-sample { background: #fafafa; padding: 15px; border-radius: 8px; border: 1px solid #eee; white-space: pre-wrap; font-size: 13px; line-height: 1.6; max-height: 200px; overflow: hidden; }
+        .phrase-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .phrase-tag { background: #e8f4f8; padding: 4px 10px; border-radius: 15px; font-size: 11px; }
+        .severity-high { background: #f8d7da; color: #842029; }
+        .severity-medium { background: #fff3cd; color: #664d03; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 8px 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 13px; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #888; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <h1>Clareo Analysis Report</h1>
+      <p style="color: #888; font-size: 13px;">Generated: ${new Date().toLocaleString()}</p>
+      
+      <h2>Summary Metrics</h2>
+      <div class="metrics-grid">
+        <div class="metric">
+          <div class="metric-value">${results.readability.grade}</div>
+          <div class="metric-label">Grade Level</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">${results.variation.cv}%</div>
+          <div class="metric-label">Sentence Variance</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">${results.vocabulary.sTTR}%</div>
+          <div class="metric-label">Vocab Variety (sTTR)</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">${results.formalRegister.totalWeight}</div>
+          <div class="metric-label">Formulaic Score</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">${results.ngrams.predictabilityScore}%</div>
+          <div class="metric-label">Predictability</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">${results.paragraphs.coherenceScore}%</div>
+          <div class="metric-label">Coherence</div>
+        </div>
       </div>
-      <div className="profile-actions">
-        <button className="btn btn-outline" onClick={handleExport}>
-          ↓ Export Profile
-        </button>
-        <button className="btn btn-outline" onClick={() => fileInputRef.current?.click()}>
-          ↑ Import Profile
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          style={{ display: "none" }}
-          onChange={handleImport}
-        />
+      
+      <h2>Additional Statistics</h2>
+      <table>
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>Total Words</td><td>${results.vocabulary.totalWords}</td></tr>
+        <tr><td>Total Sentences</td><td>${results.sentenceStats.total}</td></tr>
+        <tr><td>Avg. Sentence Length</td><td>${results.sentenceStats.mean} words</td></tr>
+        <tr><td>Unique Words</td><td>${results.vocabulary.uniqueWords}</td></tr>
+        <tr><td>Sophistication Ratio</td><td>${results.vocabulary.sophisticationRatio}%</td></tr>
+        <tr><td>Passive Voice Constructions</td><td>${results.passive.count} (${results.passive.ratio}%)</td></tr>
+        <tr><td>Paragraphs</td><td>${results.paragraphs.count}</td></tr>
+        <tr><td>Connectives Used</td><td>${results.connectives.total}</td></tr>
+      </table>
+      
+      ${results.formalPhrases.length > 0 ? `
+      <h2>Formulaic Phrases Detected</h2>
+      <table>
+        <tr><th>Phrase</th><th>Count</th><th>Weight</th><th>Score</th></tr>
+        ${results.formalPhrases.slice(0, 15).map(p => `
+          <tr><td>${p.phrase}</td><td>${p.count}</td><td>${p.weight}</td><td>${p.weightedScore}</td></tr>
+        `).join('')}
+      </table>
+      ` : ''}
+      
+      ${results.ngrams.trigrams.found.length > 0 || results.ngrams.bigrams.found.length > 0 ? `
+      <h2>Common N-gram Patterns</h2>
+      <div class="phrase-list">
+        ${results.ngrams.trigrams.found.slice(0, 8).map(ng => `<span class="phrase-tag">${ng.phrase} (×${ng.count})</span>`).join('')}
+        ${results.ngrams.bigrams.found.slice(0, 8).map(ng => `<span class="phrase-tag">${ng.phrase} (×${ng.count})</span>`).join('')}
       </div>
-    </div>
-  );
+      ` : ''}
+      
+      <h2>Analyzed Text</h2>
+      <div class="text-sample">${results.text.slice(0, 1500)}${results.text.length > 1500 ? '...' : ''}</div>
+      
+      <div class="footer">
+        <p>This report was generated by Clareo, a stylometric analysis tool. These metrics describe linguistic features and do not determine authorship.</p>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.onload = () => {
+    printWindow.print();
+  };
+};
+
+const generateComparisonPDF = (comparisonResult, baselineSampleCount) => {
+  const printWindow = window.open('', '_blank');
+  
+  const metrics = [
+    { lbl: "Grade Level", key: "grade", suffix: "", accessor: (c) => c.readability.grade },
+    { lbl: "Sentence Variance (CV)", key: "cv", suffix: "%", accessor: (c) => c.variation.cv },
+    { lbl: "Vocabulary (sTTR)", key: "sTTR", suffix: "%", accessor: (c) => c.vocabulary.sTTR },
+    { lbl: "Sophistication", key: "sophistication", suffix: "%", accessor: (c) => c.vocabulary.sophisticationRatio },
+    { lbl: "Formulaic (weighted)", key: "formalWeight", suffix: "", accessor: (c) => c.formalRegister?.totalWeight || 0 },
+    { lbl: "Predictability", key: "predictability", suffix: "%", accessor: (c) => c.ngrams?.predictabilityScore || 0 },
+    { lbl: "Coherence", key: "coherence", suffix: "%", accessor: (c) => c.paragraphs?.coherenceScore || 0 },
+  ];
+  
+  const tableRows = metrics.map(m => {
+    const base = parseFloat(comparisonResult.baseline[m.key]);
+    const curr = parseFloat(m.accessor(comparisonResult.current));
+    const diff = (curr - base).toFixed(1);
+    const isWarning = m.key === "formalWeight" || m.key === "predictability";
+    const diffColor = Math.abs(diff) > 5 
+      ? (isWarning ? (diff > 0 ? "#c0392b" : "#27ae60") : (diff > 0 ? "#27ae60" : "#c0392b"))
+      : "#2C3E50";
+    return `<tr>
+      <td>${m.lbl}</td>
+      <td>${base}${m.suffix}</td>
+      <td>${curr.toFixed(1)}${m.suffix}</td>
+      <td style="color: ${diffColor}; font-weight: ${Math.abs(diff) > 5 ? 'bold' : 'normal'}">${diff > 0 ? "+" : ""}${diff}${m.suffix}</td>
+    </tr>`;
+  }).join('');
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Clareo Comparison Report</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+        body { font-family: 'DM Sans', sans-serif; padding: 40px; color: #2C3E50; max-width: 800px; margin: 0 auto; }
+        h1 { color: #00B8D9; border-bottom: 2px solid #00B8D9; padding-bottom: 10px; }
+        h2 { color: #2C3E50; margin-top: 30px; font-size: 18px; }
+        .summary { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #e8f4f8; font-weight: 600; }
+        .interpretation { background: #eef; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; }
+        .interpretation strong { color: #00B8D9; }
+        .text-sample { background: #fafafa; padding: 15px; border-radius: 8px; border: 1px solid #eee; white-space: pre-wrap; font-size: 13px; line-height: 1.6; max-height: 150px; overflow: hidden; margin-top: 10px; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #888; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      <h1>Clareo Comparison Report</h1>
+      <p style="color: #888; font-size: 13px;">Generated: ${new Date().toLocaleString()}</p>
+      
+      <div class="summary">
+        <strong>Baseline:</strong> ${baselineSampleCount} sample${baselineSampleCount !== 1 ? 's' : ''} averaged<br>
+        <strong>New Text:</strong> ${comparisonResult.current.vocabulary.totalWords} words, ${comparisonResult.current.sentenceStats.total} sentences
+      </div>
+      
+      <h2>Metric Comparison</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Student Profile</th>
+            <th>New Text</th>
+            <th>Difference</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+      
+      <div class="interpretation">
+        <strong>Reading this report:</strong> Differences greater than ±5 are highlighted. For Formulaic and Predictability metrics, increases (positive differences) may indicate a shift toward template-driven language. For Sentence Variance, decreases may indicate more uniform sentence structure.
+      </div>
+      
+      <h2>New Text Sample</h2>
+      <div class="text-sample">${comparisonResult.current.text.slice(0, 800)}${comparisonResult.current.text.length > 800 ? '...' : ''}</div>
+      
+      <div class="footer">
+        <p>This report was generated by Clareo, a stylometric analysis tool. These metrics describe linguistic features and do not determine authorship. Use unusual patterns as a starting point for discussion, not as evidence.</p>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.onload = () => {
+    printWindow.print();
+  };
 };
 
 export default function App() {
@@ -634,7 +717,6 @@ export default function App() {
   const [baselineSamples, setBaselineSamples] = useState([]);
   const [comparisonText, setComparisonText] = useState("");
   const [comparisonResult, setComparisonResult] = useState(null);
-  const [studentName, setStudentName] = useState("");
 
   const handleAnalyze = () => {
     if (!analysisText.trim()) return;
@@ -665,11 +747,6 @@ export default function App() {
 
   const removeBaseline = (id) => {
     setBaselineSamples(baselineSamples.filter((s) => s.id !== id));
-  };
-
-  const handleProfileImport = (samples, name) => {
-    setBaselineSamples(samples);
-    if (name) setStudentName(name);
   };
 
   const runComparison = () => {
@@ -853,12 +930,6 @@ export default function App() {
         .para-block { background: #e8f4f8; padding: 8px; border-radius: 6px; text-align: center; font-size: 11px; }
         .para-block.has-transition { border-left: 3px solid var(--primary); }
         
-        .profile-manager { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .profile-name-input { margin-bottom: 10px; }
-        .profile-name-input label { font-size: 12px; color: #666; display: block; margin-bottom: 5px; }
-        .profile-name-input input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; }
-        .profile-actions { display: flex; gap: 10px; }
-        
         .references { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
         .references h3 { font-size: 14px; color: var(--text); margin-bottom: 10px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 1px; }
         .ref-item { margin-bottom: 5px; padding-left: 10px; border-left: 2px solid var(--primary); }
@@ -917,6 +988,16 @@ export default function App() {
                 </div>
               ) : (
                 <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                    <h2 style={{ margin: 0 }}>Analysis Results</h2>
+                    <button 
+                      className="btn btn-outline" 
+                      onClick={() => generateAnalysisPDF(results)}
+                      style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                    >
+                      ↓ Download PDF
+                    </button>
+                  </div>
                   <div className="metrics-row metrics-row-5">
                     <MetricCard
                       value={results.readability.grade}
@@ -1092,14 +1173,6 @@ export default function App() {
             <div className="panel">
               <h2>1. Build Student Profile</h2>
               
-              {/* Profile Manager */}
-              <ProfileManager
-                samples={baselineSamples}
-                onImport={handleProfileImport}
-                studentName={studentName}
-                onNameChange={setStudentName}
-              />
-              
               <p style={{ fontSize: "13px", color: "#666", marginBottom: "15px" }}>
                 Add 3+ past assignments to create a reliable baseline average.
               </p>
@@ -1188,6 +1261,15 @@ export default function App() {
                 <div style={{ marginTop: "15px", background: "#eef", padding: "10px", borderRadius: "6px", fontSize: "12px" }}>
                   <strong>Tip:</strong> Watch for simultaneous jumps in "Formulaic" and "Predictability" combined with drops in "Sentence Var" — these patterns suggest a shift away from the student's natural voice.
                 </div>
+              )}
+              {comparisonResult && (
+                <button 
+                  className="btn btn-outline" 
+                  onClick={() => generateComparisonPDF(comparisonResult, baselineSamples.length)}
+                  style={{ marginTop: "15px", display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  ↓ Download Comparison PDF
+                </button>
               )}
             </div>
           </div>
