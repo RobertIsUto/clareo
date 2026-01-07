@@ -221,6 +221,16 @@ textarea::placeholder {
   color: var(--text-muted);
 }
 
+select {
+  color: var(--text-primary);
+  background-color: white;
+}
+
+select option {
+  color: var(--text-primary);
+  background-color: white;
+}
+
 .btn {
   background: var(--primary);
   color: white;
@@ -679,4 +689,207 @@ textarea::placeholder {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* Enhanced Comparison Styles */
+
+.enhanced-comp-table {
+  font-size: 0.875rem;
+}
+
+.enhanced-comp-table td {
+  vertical-align: top;
+}
+
+.significance-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-xl);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.significance-badge.deviation-normal {
+  background: rgba(82, 183, 136, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(82, 183, 136, 0.3);
+}
+
+.significance-badge.deviation-medium {
+  background: rgba(244, 162, 97, 0.15);
+  color: var(--warning);
+  border: 1px solid rgba(244, 162, 97, 0.3);
+}
+
+.significance-badge.deviation-high {
+  background: rgba(231, 111, 81, 0.15);
+  color: var(--error);
+  border: 1px solid rgba(231, 111, 81, 0.3);
+}
+
+/* Profile Card Styles */
+
+.profile-card {
+  background: white;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.profile-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.profile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.profile-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin: 0;
+}
+
+.profile-card-badge {
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-xl);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.profile-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-sm);
+}
+
+.profile-metric-item {
+  padding: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+
+.profile-metric-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-metric-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.profile-signature-words {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background: rgba(74, 144, 164, 0.05);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--info);
+}
+
+.profile-signature-words-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.signature-word-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.signature-word-item {
+  padding: 0.25rem 0.5rem;
+  background: white;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  font-weight: 500;
+}
+
+/* Confidence Interval Visualization */
+
+.confidence-range-bar {
+  position: relative;
+  height: 40px;
+  margin: var(--spacing-sm) 0;
+  background: linear-gradient(to right,
+    rgba(231, 111, 81, 0.1) 0%,
+    rgba(244, 162, 97, 0.1) 15%,
+    rgba(82, 183, 136, 0.15) 30%,
+    rgba(82, 183, 136, 0.15) 70%,
+    rgba(244, 162, 97, 0.1) 85%,
+    rgba(231, 111, 81, 0.1) 100%
+  );
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+
+.confidence-baseline-mean {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--primary);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.confidence-current-value {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--primary-dark);
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+
+/* Responsive Enhancements */
+
+@media (max-width: 1024px) {
+  .profile-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .enhanced-comp-table {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-card {
+    padding: var(--spacing-md);
+  }
+
+  .significance-badge {
+    font-size: 0.6875rem;
+    padding: 0.2rem 0.5rem;
+  }
 }

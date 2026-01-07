@@ -84,3 +84,92 @@ export function getWordCount(text) {
   const words = text.match(wordRegex) || [];
   return words.length;
 }
+
+/**
+ * Format a number with fixed decimal places and optional suffix
+ * @param {number} value - Number to format
+ * @param {number} decimals - Number of decimal places
+ * @param {string} suffix - Optional suffix (%, etc.)
+ * @returns {string} Formatted number
+ */
+export function formatNumber(value, decimals = 1, suffix = '') {
+  const formatted = parseFloat(value).toFixed(decimals);
+  return suffix ? `${formatted}${suffix}` : formatted;
+}
+
+/**
+ * Format a range of values (min-max)
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @param {number} decimals - Number of decimal places
+ * @param {string} suffix - Optional suffix
+ * @returns {string} Formatted range (e.g., "5.2-8.7%")
+ */
+export function formatRange(min, max, decimals = 1, suffix = '') {
+  const minFormatted = parseFloat(min).toFixed(decimals);
+  const maxFormatted = parseFloat(max).toFixed(decimals);
+  return suffix ? `${minFormatted}-${maxFormatted}${suffix}` : `${minFormatted}-${maxFormatted}`;
+}
+
+/**
+ * Format a value with confidence interval
+ * @param {number} mean - Mean value
+ * @param {number} stdDev - Standard deviation
+ * @param {number} decimals - Number of decimal places
+ * @param {string} suffix - Optional suffix
+ * @returns {string} Formatted with +/- notation
+ */
+export function formatWithConfidence(mean, stdDev, decimals = 1, suffix = '') {
+  const meanFormatted = parseFloat(mean).toFixed(decimals);
+  const stdDevFormatted = parseFloat(stdDev).toFixed(decimals);
+  return suffix
+    ? `${meanFormatted}${suffix} (±${stdDevFormatted}${suffix})`
+    : `${meanFormatted} (±${stdDevFormatted})`;
+}
+
+/**
+ * Get significance level label from z-score
+ * @param {number} zScore - Absolute z-score value
+ * @returns {string} Significance label
+ */
+export function getSignificanceLabel(zScore) {
+  const absZScore = Math.abs(zScore);
+  if (absZScore >= 2.0) return 'ALERT';
+  if (absZScore >= 1.5) return 'WARNING';
+  if (absZScore >= 1.0) return 'NOTICE';
+  return 'OK';
+}
+
+/**
+ * Get color class for z-score
+ * @param {number} zScore - Absolute z-score value
+ * @returns {string} CSS class name
+ */
+export function getZScoreColorClass(zScore) {
+  const absZScore = Math.abs(zScore);
+  if (absZScore >= 2.0) return 'deviation-high';
+  if (absZScore >= 1.0) return 'deviation-medium';
+  return 'deviation-normal';
+}
+
+/**
+ * Truncate text to maximum length with ellipsis
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length
+ * @returns {string} Truncated text
+ */
+export function truncateText(text, maxLength = 50) {
+  if (!text || text.length <= maxLength) return text || '';
+  return text.slice(0, maxLength) + '...';
+}
+
+/**
+ * Calculate percentage change
+ * @param {number} oldValue - Original value
+ * @param {number} newValue - New value
+ * @returns {number} Percentage change
+ */
+export function calculatePercentageChange(oldValue, newValue) {
+  if (oldValue === 0) return newValue > 0 ? 100 : 0;
+  return ((newValue - oldValue) / oldValue) * 100;
+}

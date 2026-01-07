@@ -4,8 +4,12 @@ import { MetricCard } from "./components/MetricCard";
 import { TextHighlighter } from "./components/TextHighlighter";
 import { runFullAnalysis } from "./utils/textAnalysis";
 import { generateAnalysisPDF, generateComparisonPDF, generateMethodologyPDF } from "./utils/pdfGenerator";
-import { getWordCount } from "./utils/textHelpers";
-import { THRESHOLDS } from "./constants/thresholds";
+import { getWordCount, formatRange, formatWithConfidence, getSignificanceLabel, getZScoreColorClass } from "./utils/textHelpers";
+import { THRESHOLDS, STATISTICAL_THRESHOLDS, COMPOSITE_SCORE_WEIGHTS, STYLE_CHANGE_FLAGS } from "./constants/thresholds";
+import { calculateMetricStatistics, calculateZScore, isStatisticallySignificant, detectOutliers } from "./utils/statisticalAnalysis";
+import { buildVocabularyProfile, compareVocabularyProfiles, extractVocabularyProfile } from "./utils/vocabularyFingerprint";
+import { buildSyntacticProfile, compareSyntacticProfiles, analyzeSentenceStructure } from "./utils/syntacticAnalysis";
+import { buildErrorProfile, compareErrorProfiles, detectErrorPatterns } from "./utils/errorDetection";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState("analysis");
@@ -15,6 +19,7 @@ export default function App() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [baselineInput, setBaselineInput] = useState("");
+  const [assignmentType, setAssignmentType] = useState("essay");
   const [baselineSamples, setBaselineSamples] = useState([]);
   const [comparisonText, setComparisonText] = useState("");
   const [comparisonResult, setComparisonResult] = useState(null);
@@ -44,54 +49,291 @@ export default function App() {
     setBaselineSamples(prev => [
       ...prev,
       {
-        id: Date.now(),
-        text: baselineInput.slice(0, 50) + "...",
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        fullText: baselineInput,
+        preview: baselineInput.slice(0, 50) + "...",
         data: analysis,
+        metadata: {
+          wordCount: analysis.vocabulary.totalWords,
+          dateAdded: new Date().toISOString(),
+          assignmentType: assignmentType,
+          isOutlier: false
+        }
       },
     ]);
     setBaselineInput("");
-  }, [baselineInput]);
+  }, [baselineInput, assignmentType]);
 
   const removeBaseline = useCallback((id) => {
     setBaselineSamples(prev => prev.filter((s) => s.id !== id));
   }, []);
 
+  /**
+   * Build comprehensive student writing profile from baseline samples
+   * Includes statistical analysis for all metrics plus vocabulary, syntax, and error patterns
+   */
+  const buildStudentProfile = useCallback((samples) => {
+    if (!samples || samples.length === 0) {
+      return null;
+    }
+
+    const metrics = {};
+    const metricKeys = [
+      { key: 'grade', accessor: (s) => parseFloat(s.data.readability.grade) },
+      { key: 'cv', accessor: (s) => parseFloat(s.data.variation.cv) },
+      { key: 'sTTR', accessor: (s) => parseFloat(s.data.vocabulary.sTTR) },
+      { key: 'sophistication', accessor: (s) => parseFloat(s.data.vocabulary.sophisticationRatio) },
+      { key: 'formalWeight', accessor: (s) => s.data.formalRegister?.totalWeight || 0 },
+      { key: 'predictability', accessor: (s) => parseFloat(s.data.ngrams?.predictabilityScore || 0) },
+      { key: 'coherence', accessor: (s) => parseFloat(s.data.paragraphs?.coherenceScore || 0) },
+      { key: 'passiveRatio', accessor: (s) => parseFloat(s.data.passive?.ratio || 0) },
+      { key: 'avgSentenceLength', accessor: (s) => parseFloat(s.data.sentenceStats?.mean || 0) },
+      { key: 'totalWords', accessor: (s) => s.data.vocabulary.totalWords }
+    ];
+
+    metricKeys.forEach(({ key, accessor }) => {
+      const values = samples.map(accessor);
+      metrics[key] = calculateMetricStatistics(values);
+    });
+
+    const texts = samples.map(s => s.fullText);
+    const vocabulary = buildVocabularyProfile(texts);
+    const syntactic = buildSyntacticProfile(texts);
+    const errors = buildErrorProfile(texts);
+
+    const outlierSamples = detectOutliers(
+      samples.map(s => ({ id: s.id, value: s.data.vocabulary.totalWords })),
+      'iqr'
+    );
+
+    const overallVariance = Object.values(metrics).reduce((sum, m) => {
+      return sum + (m.stdDev / (m.mean || 1));
+    }, 0) / Object.keys(metrics).length;
+
+    const confidenceScore = Math.max(0, Math.min(100,
+      100 - (overallVariance * 10) - (outlierSamples.length * 5)
+    ));
+
+    return {
+      metrics,
+      vocabulary,
+      syntactic,
+      errors,
+      reliability: {
+        sampleCount: samples.length,
+        overallVariance: overallVariance.toFixed(2),
+        confidenceScore: confidenceScore.toFixed(0),
+        outlierCount: outlierSamples.length,
+        outlierIds: outlierSamples
+      }
+    };
+  }, []);
+
+  /**
+   * Calculate metric deviations with z-scores and significance levels
+   */
+  const calculateMetricDeviations = useCallback((baselineMetrics, currentAnalysis) => {
+    const deviations = [];
+
+    const metricMapping = [
+      { key: 'grade', label: 'Grade Level', accessor: (c) => parseFloat(c.readability.grade), suffix: '' },
+      { key: 'cv', label: 'Sentence Variation', accessor: (c) => parseFloat(c.variation.cv), suffix: '%' },
+      { key: 'sTTR', label: 'Vocabulary Variety', accessor: (c) => parseFloat(c.vocabulary.sTTR), suffix: '%' },
+      { key: 'sophistication', label: 'Sophistication', accessor: (c) => parseFloat(c.vocabulary.sophisticationRatio), suffix: '%' },
+      { key: 'formalWeight', label: 'Formulaic Weight', accessor: (c) => c.formalRegister?.totalWeight || 0, suffix: '' },
+      { key: 'predictability', label: 'Predictability', accessor: (c) => parseFloat(c.ngrams?.predictabilityScore || 0), suffix: '%' },
+      { key: 'coherence', label: 'Coherence', accessor: (c) => parseFloat(c.paragraphs?.coherenceScore || 0), suffix: '%' },
+      { key: 'passiveRatio', label: 'Passive Voice', accessor: (c) => parseFloat(c.passive?.ratio || 0), suffix: '%' },
+      { key: 'avgSentenceLength', label: 'Avg Sentence Length', accessor: (c) => parseFloat(c.sentenceStats?.mean || 0), suffix: '' }
+    ];
+
+    metricMapping.forEach(({ key, label, accessor, suffix }) => {
+      const baseline = baselineMetrics[key];
+      if (!baseline) return;
+
+      const currentValue = accessor(currentAnalysis);
+      const diff = currentValue - baseline.mean;
+      const zScore = calculateZScore(currentValue, baseline.mean, baseline.stdDev);
+      const significance = isStatisticallySignificant(diff, baseline.stdDev, STATISTICAL_THRESHOLDS.SIGNIFICANCE_LEVELS.MEDIUM);
+
+      deviations.push({
+        key,
+        label,
+        baselineMean: baseline.mean,
+        baselineStdDev: baseline.stdDev,
+        baselineMin: baseline.min,
+        baselineMax: baseline.max,
+        currentValue,
+        diff,
+        zScore,
+        significance: significance.level,
+        isSignificant: significance.significant,
+        suffix,
+        colorClass: getZScoreColorClass(zScore),
+        significanceLabel: getSignificanceLabel(zScore)
+      });
+    });
+
+    return deviations;
+  }, []);
+
+  /**
+   * Calculate composite consistency score (0-100)
+   * Higher scores indicate better consistency with baseline
+   */
+  const calculateCompositeScore = useCallback((metricDeviations, vocabComparison, syntaxComparison, errorComparison) => {
+    let metricScore = 100;
+    const significantDeviations = metricDeviations.filter(d => d.isSignificant);
+    metricDeviations.forEach(deviation => {
+      const penalty = Math.abs(deviation.zScore) * 5;
+      metricScore -= penalty;
+    });
+    metricScore = Math.max(0, metricScore);
+
+    const vocabScore = vocabComparison.overlapScore || 50;
+
+    const syntaxScore = Math.max(0, 100 - (syntaxComparison.overallDeviation * 20));
+
+    const errorScore = errorComparison.suspiciouslyClean ? 50 :
+      Math.max(0, 100 - Math.abs(errorComparison.cleanlinessChange));
+
+    let specialPenalty = 0;
+    if (errorComparison.suspiciouslyClean) {
+      specialPenalty += 10;
+    }
+    if (significantDeviations.length >= 3) {
+      specialPenalty += 15;
+    }
+
+    const compositeScore = (
+      metricScore * COMPOSITE_SCORE_WEIGHTS.METRIC_DEVIATIONS +
+      vocabScore * COMPOSITE_SCORE_WEIGHTS.VOCABULARY_OVERLAP +
+      syntaxScore * COMPOSITE_SCORE_WEIGHTS.SYNTACTIC_PATTERNS +
+      errorScore * COMPOSITE_SCORE_WEIGHTS.ERROR_CONSISTENCY
+    ) - specialPenalty;
+
+    return Math.max(0, Math.min(100, compositeScore));
+  }, []);
+
+  /**
+   * Generate style change flags based on analysis
+   */
+  const generateStyleChangeFlags = useCallback((metricDeviations, vocabComparison, syntaxComparison, errorComparison, reliability) => {
+    const flags = [];
+
+    if (errorComparison.suspiciouslyClean) {
+      flags.push({
+        type: 'SUSPICIOUSLY_CLEAN',
+        severity: 'high',
+        message: STYLE_CHANGE_FLAGS.SUSPICIOUSLY_CLEAN.message,
+        detail: errorComparison.confidenceNote
+      });
+    }
+
+    if (vocabComparison.overlapScore < STYLE_CHANGE_FLAGS.VOCABULARY_SHIFT.threshold) {
+      flags.push({
+        type: 'VOCABULARY_SHIFT',
+        severity: 'medium',
+        message: STYLE_CHANGE_FLAGS.VOCABULARY_SHIFT.message,
+        detail: `Vocabulary overlap: ${vocabComparison.overlapScore.toFixed(0)}%`
+      });
+    }
+
+    const significantDeviations = metricDeviations.filter(d => d.isSignificant);
+    if (significantDeviations.length >= STYLE_CHANGE_FLAGS.MULTIPLE_DEVIATIONS.threshold) {
+      flags.push({
+        type: 'MULTIPLE_DEVIATIONS',
+        severity: 'high',
+        message: STYLE_CHANGE_FLAGS.MULTIPLE_DEVIATIONS.message,
+        detail: `${significantDeviations.length} metrics showing significant deviations`
+      });
+    }
+
+    if (syntaxComparison.overallDeviation >= STYLE_CHANGE_FLAGS.SYNTACTIC_SHIFT.threshold) {
+      flags.push({
+        type: 'SYNTACTIC_SHIFT',
+        severity: 'medium',
+        message: STYLE_CHANGE_FLAGS.SYNTACTIC_SHIFT.message,
+        detail: `Syntactic deviation score: ${syntaxComparison.overallDeviation.toFixed(2)}`
+      });
+    }
+
+    const sophisticationDeviation = metricDeviations.find(d => d.key === 'sophistication');
+    if (sophisticationDeviation && Math.abs(sophisticationDeviation.zScore) >= STYLE_CHANGE_FLAGS.SOPHISTICATION_JUMP.threshold) {
+      flags.push({
+        type: 'SOPHISTICATION_JUMP',
+        severity: 'medium',
+        message: STYLE_CHANGE_FLAGS.SOPHISTICATION_JUMP.message,
+        detail: `Z-score: ${sophisticationDeviation.zScore.toFixed(2)}`
+      });
+    }
+
+    const formulaicDeviation = metricDeviations.find(d => d.key === 'formalWeight');
+    if (formulaicDeviation && formulaicDeviation.zScore >= STYLE_CHANGE_FLAGS.FORMULAIC_INCREASE.threshold) {
+      flags.push({
+        type: 'FORMULAIC_INCREASE',
+        severity: 'low',
+        message: STYLE_CHANGE_FLAGS.FORMULAIC_INCREASE.message,
+        detail: `Formulaic weight increased by ${formulaicDeviation.diff.toFixed(1)}`
+      });
+    }
+
+    return flags;
+  }, []);
+
+  /**
+   * Run comprehensive comparison analysis
+   */
   const runComparison = useCallback(() => {
     if (baselineSamples.length === 0 || !comparisonText.trim()) return;
 
     const current = runFullAnalysis(comparisonText);
 
-    const profile = {
-      grade: 0, cv: 0, sTTR: 0, sophistication: 0,
-      formalWeight: 0, predictability: 0, coherence: 0,
-    };
+    const profile = buildStudentProfile(baselineSamples);
 
-    baselineSamples.forEach((sample) => {
-      profile.grade += parseFloat(sample.data.readability.grade);
-      profile.cv += parseFloat(sample.data.variation.cv);
-      profile.sTTR += parseFloat(sample.data.vocabulary.sTTR);
-      profile.sophistication += parseFloat(sample.data.vocabulary.sophisticationRatio);
-      profile.formalWeight += sample.data.formalRegister?.totalWeight || 0;
-      profile.predictability += parseFloat(sample.data.ngrams?.predictabilityScore || 0);
-      profile.coherence += parseFloat(sample.data.paragraphs?.coherenceScore || 0);
-    });
+    if (!profile) {
+      alert("Unable to build student profile. Please ensure baseline samples are valid.");
+      return;
+    }
 
-    const count = baselineSamples.length;
-    const averagedProfile = {
-      grade: (profile.grade / count).toFixed(1),
-      cv: (profile.cv / count).toFixed(1),
-      sTTR: (profile.sTTR / count).toFixed(1),
-      sophistication: (profile.sophistication / count).toFixed(1),
-      formalWeight: (profile.formalWeight / count).toFixed(1),
-      predictability: (profile.predictability / count).toFixed(0),
-      coherence: (profile.coherence / count).toFixed(0),
-    };
+    const currentVocabProfile = extractVocabularyProfile(comparisonText);
+    const vocabComparison = compareVocabularyProfiles(profile.vocabulary, currentVocabProfile);
+
+    const currentSyntaxAnalysis = analyzeSentenceStructure(comparisonText);
+    const syntaxComparison = compareSyntacticProfiles(profile.syntactic, currentSyntaxAnalysis);
+
+    const currentErrorAnalysis = detectErrorPatterns(comparisonText);
+    const errorComparison = compareErrorProfiles(profile.errors, currentErrorAnalysis);
+
+    const metricDeviations = calculateMetricDeviations(profile.metrics, current);
+
+    const consistencyScore = calculateCompositeScore(
+      metricDeviations,
+      vocabComparison,
+      syntaxComparison,
+      errorComparison
+    );
+
+    const flags = generateStyleChangeFlags(
+      metricDeviations,
+      vocabComparison,
+      syntaxComparison,
+      errorComparison,
+      profile.reliability
+    );
 
     setComparisonResult({
-      baseline: averagedProfile,
-      current: current,
+      profile,
+      current,
+      metricDeviations,
+      vocabComparison,
+      syntaxComparison,
+      errorComparison,
+      consistencyScore,
+      flags
     });
-  }, [baselineSamples, comparisonText]);
+  }, [baselineSamples, comparisonText, buildStudentProfile, calculateMetricDeviations, calculateCompositeScore, generateStyleChangeFlags]);
 
   return (
     <div className="clareo-app">
@@ -115,7 +357,7 @@ export default function App() {
 
       <div className="content-wrapper">
         {activeSection === "analysis" && (
-          <AnalysisSection 
+          <AnalysisSection
             analysisText={analysisText}
             setAnalysisText={setAnalysisText}
             wordCount={wordCount}
@@ -129,9 +371,11 @@ export default function App() {
         )}
 
         {activeSection === "compare" && (
-          <ComparisonSection 
+          <ComparisonSection
             baselineInput={baselineInput}
             setBaselineInput={setBaselineInput}
+            assignmentType={assignmentType}
+            setAssignmentType={setAssignmentType}
             addBaselineSample={addBaselineSample}
             baselineSamples={baselineSamples}
             removeBaseline={removeBaseline}
@@ -186,7 +430,7 @@ function AnalysisSection({ analysisText, setAnalysisText, wordCount, handleAnaly
             Enter text and analyze to see metrics.
           </div>
         ) : (
-          <ResultsDisplay 
+          <ResultsDisplay
             results={results}
             highlightMode={highlightMode}
             setHighlightMode={setHighlightMode}
@@ -204,11 +448,11 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <h2 style={{ margin: 0 }}>Analysis Results</h2>
-        <button 
-          className="btn btn-outline btn-small" 
+        <button
+          className="btn btn-outline btn-small"
           onClick={() => generateAnalysisPDF(results)}
         >
-          ↓ Download PDF
+          Download PDF
         </button>
       </div>
 
@@ -305,7 +549,7 @@ function AdvancedSection({ results, showAdvanced, setShowAdvanced }) {
       <button className="toggle-advanced" onClick={() => setShowAdvanced(!showAdvanced)}>
         {showAdvanced ? "▼" : "▶"} Advanced Analysis
       </button>
-      
+
       {showAdvanced && (
         <>
           <h3>Paragraph Flow</h3>
@@ -314,7 +558,7 @@ function AdvancedSection({ results, showAdvanced, setShowAdvanced }) {
             <MetricCard value={results.paragraphs.coherenceScore + "%"} label="Coherence" />
             <MetricCard value={results.paragraphs.transitionRate + "%"} label="Transition Rate" />
           </div>
-          
+
           <div className="paragraph-grid">
             {results.paragraphs.paragraphDetails.map((p) => (
               <div key={p.index} className={"para-block" + (p.hasTransition ? " has-transition" : "")} title={"Opens: \"" + p.openingWords + "...\""}>
@@ -329,10 +573,10 @@ function AdvancedSection({ results, showAdvanced, setShowAdvanced }) {
               <h3>Common N-gram Patterns</h3>
               <div className="ngram-list">
                 {results.ngrams.trigrams.found.slice(0, 5).map((ng, i) => (
-                  <span key={"tri-" + i} className="ngram-tag">{ng.phrase} ×{ng.count}</span>
+                  <span key={"tri-" + i} className="ngram-tag">{ng.phrase} x{ng.count}</span>
                 ))}
                 {results.ngrams.bigrams.found.slice(0, 5).map((ng, i) => (
-                  <span key={"bi-" + i} className="ngram-tag">{ng.phrase} ×{ng.count}</span>
+                  <span key={"bi-" + i} className="ngram-tag">{ng.phrase} x{ng.count}</span>
                 ))}
               </div>
             </>
@@ -343,15 +587,54 @@ function AdvancedSection({ results, showAdvanced, setShowAdvanced }) {
   );
 }
 
-function ComparisonSection({ baselineInput, setBaselineInput, addBaselineSample, baselineSamples, removeBaseline, comparisonText, setComparisonText, runComparison, comparisonResult }) {
+function ComparisonSection({ baselineInput, setBaselineInput, assignmentType, setAssignmentType, addBaselineSample, baselineSamples, removeBaseline, comparisonText, setComparisonText, runComparison, comparisonResult }) {
+  const profileQuality = useMemo(() => {
+    if (baselineSamples.length === 0) return null;
+
+    if (baselineSamples.length >= STATISTICAL_THRESHOLDS.STRONG_BASELINE_SAMPLES) {
+      return { level: 'strong', color: 'var(--success)', label: 'Strong' };
+    } else if (baselineSamples.length >= STATISTICAL_THRESHOLDS.RECOMMENDED_BASELINE_SAMPLES) {
+      return { level: 'good', color: 'var(--info)', label: 'Good' };
+    } else if (baselineSamples.length >= STATISTICAL_THRESHOLDS.MIN_BASELINE_SAMPLES) {
+      return { level: 'weak', color: 'var(--warning)', label: 'Weak' };
+    }
+    return { level: 'insufficient', color: 'var(--error)', label: 'Insufficient' };
+  }, [baselineSamples.length]);
+
   return (
     <div className="grid">
       <div className="panel">
         <h2>1. Build Student Profile</h2>
-        
+
         <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
-          Add 3+ past assignments to create a reliable baseline average.
+          Add 3+ past assignments to create a reliable baseline average. More samples improve accuracy.
         </p>
+
+        <div style={{ marginBottom: "0.75rem" }}>
+          <label style={{ display: "block", fontSize: "0.875rem", marginBottom: "0.5rem", color: "var(--text-secondary)" }}>
+            Assignment Type
+          </label>
+          <select
+            value={assignmentType}
+            onChange={(e) => setAssignmentType(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              borderRadius: "6px",
+              border: "1px solid var(--border-medium)",
+              fontSize: "0.875rem",
+              backgroundColor: "white",
+              color: "var(--text-primary)"
+            }}
+          >
+            <option value="essay">Essay</option>
+            <option value="creative">Creative Writing</option>
+            <option value="lab-report">Lab Report</option>
+            <option value="response">Response Paper</option>
+            <option value="research">Research Paper</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
 
         <textarea
           style={{ minHeight: "100px" }}
@@ -366,13 +649,36 @@ function ComparisonSection({ baselineInput, setBaselineInput, addBaselineSample,
           }}
         />
         <button className="btn btn-outline btn-small" onClick={addBaselineSample} disabled={!baselineInput.trim()}>
-          + Add Sample
+          Add Sample
         </button>
+
+        {profileQuality && (
+          <div style={{
+            marginTop: "1rem",
+            padding: "0.75rem",
+            borderRadius: "8px",
+            border: `2px solid ${profileQuality.color}`,
+            backgroundColor: `${profileQuality.color}15`,
+            fontSize: "0.875rem"
+          }}>
+            <strong>Profile Quality: {profileQuality.label}</strong>
+            {baselineSamples.length < STATISTICAL_THRESHOLDS.STRONG_BASELINE_SAMPLES && (
+              <div style={{ marginTop: "0.25rem", color: "var(--text-secondary)" }}>
+                Add {STATISTICAL_THRESHOLDS.STRONG_BASELINE_SAMPLES - baselineSamples.length} more sample(s) for stronger analysis
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="baseline-list" style={{ marginTop: "1.5rem" }}>
           {baselineSamples.map((s, i) => (
             <div key={s.id} className="baseline-item">
-              <span>Sample {i + 1} ({s.data.vocabulary.totalWords} words)</span>
+              <div style={{ flex: 1 }}>
+                <div>Sample {i + 1} ({s.metadata.wordCount} words)</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  {s.metadata.assignmentType} • {new Date(s.metadata.dateAdded).toLocaleDateString()}
+                </div>
+              </div>
               <button className="remove-btn" onClick={() => removeBaseline(s.id)}>×</button>
             </div>
           ))}
@@ -406,69 +712,162 @@ function ComparisonSection({ baselineInput, setBaselineInput, addBaselineSample,
           Compare vs Profile
         </button>
 
-        {comparisonResult && <ComparisonTable comparisonResult={comparisonResult} baselineSamples={baselineSamples} />}
+        {comparisonResult && <ComparisonResults comparisonResult={comparisonResult} baselineSamples={baselineSamples} />}
       </div>
     </div>
   );
 }
 
-function ComparisonTable({ comparisonResult, baselineSamples }) {
-  const metrics = [
-    { lbl: "Grade Level", key: "grade", suffix: "", accessor: (c) => c.readability.grade },
-    { lbl: "Sentence Var (CV)", key: "cv", suffix: "%", accessor: (c) => c.variation.cv },
-    { lbl: "Vocab (sTTR)", key: "sTTR", suffix: "%", accessor: (c) => c.vocabulary.sTTR },
-    { lbl: "Sophistication", key: "sophistication", suffix: "%", accessor: (c) => c.vocabulary.sophisticationRatio },
-    { lbl: "Formulaic (wt)", key: "formalWeight", suffix: "", accessor: (c) => c.formalRegister?.totalWeight || 0 },
-    { lbl: "Predictability", key: "predictability", suffix: "%", accessor: (c) => c.ngrams?.predictabilityScore || 0 },
-    { lbl: "Coherence", key: "coherence", suffix: "%", accessor: (c) => c.paragraphs?.coherenceScore || 0 },
-  ];
+function ComparisonResults({ comparisonResult, baselineSamples }) {
+  const { consistencyScore, flags, metricDeviations, profile } = comparisonResult;
+
+  const getScoreColor = (score) => {
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.EXCELLENT) return 'var(--success)';
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.GOOD) return 'var(--info)';
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.MODERATE) return 'var(--warning)';
+    return 'var(--error)';
+  };
+
+  const getScoreLabel = (score) => {
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.EXCELLENT) return 'Highly Consistent';
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.GOOD) return 'Generally Consistent';
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.MODERATE) return 'Noticeable Deviation';
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.CONCERNING) return 'Significant Deviation';
+    return 'Dramatic Change';
+  };
 
   return (
     <>
-      <table className="comp-table">
-        <thead>
-          <tr>
-            <th>Metric</th>
-            <th>Student Profile</th>
-            <th>New Text</th>
-            <th>Difference</th>
-          </tr>
-        </thead>
-        <tbody>
-          {metrics.map((m) => {
-            const base = parseFloat(comparisonResult.baseline[m.key]);
-            const curr = parseFloat(m.accessor(comparisonResult.current));
-            const diff = (curr - base).toFixed(1);
-            const isWarning = m.key === "formalWeight" || m.key === "predictability";
-            const diffClass = isWarning 
-              ? (diff > 0 ? "diff-neg" : "diff-pos")
-              : (diff > 0 ? "diff-pos" : "diff-neg");
-            return (
-              <tr key={m.key}>
-                <td>{m.lbl}</td>
-                <td>{base}{m.suffix}</td>
-                <td>{curr.toFixed(1)}{m.suffix}</td>
-                <td className={Math.abs(diff) > THRESHOLDS.SIGNIFICANT_DIFF ? diffClass : ""}>
-                  {diff > 0 ? "+" : ""}{diff}{m.suffix}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      <div style={{ marginTop: "1rem", background: "rgba(74, 144, 164, 0.1)", padding: "1rem", borderRadius: "10px", fontSize: "0.875rem" }}>
-        <strong>Tip:</strong> Watch for simultaneous jumps in "Formulaic" and "Predictability" combined with drops in "Sentence Var" — these patterns suggest a shift away from the student's natural voice.
+      <div style={{
+        marginTop: "1.5rem",
+        padding: "1.5rem",
+        borderRadius: "12px",
+        border: `2px solid ${getScoreColor(consistencyScore)}`,
+        backgroundColor: `${getScoreColor(consistencyScore)}10`
+      }}>
+        <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
+          Style Consistency Score
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.75rem" }}>
+          <div style={{ fontSize: "2.5rem", fontWeight: "700", color: getScoreColor(consistencyScore) }}>
+            {consistencyScore.toFixed(0)}
+          </div>
+          <div>
+            <div style={{ fontSize: "1.125rem", fontWeight: "600" }}>{getScoreLabel(consistencyScore)}</div>
+            <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}>
+              Based on {baselineSamples.length} baseline sample(s)
+            </div>
+          </div>
+        </div>
+        <div style={{
+          height: "8px",
+          backgroundColor: "rgba(0,0,0,0.1)",
+          borderRadius: "4px",
+          overflow: "hidden"
+        }}>
+          <div style={{
+            width: `${consistencyScore}%`,
+            height: "100%",
+            backgroundColor: getScoreColor(consistencyScore),
+            transition: "width 0.3s ease"
+          }}></div>
+        </div>
       </div>
 
-      <button 
-        className="btn btn-outline btn-small" 
+      {flags.length > 0 && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <h3 style={{ marginBottom: "1rem" }}>Style Change Indicators</h3>
+          {flags.map((flag, idx) => (
+            <div key={idx} style={{
+              padding: "0.75rem 1rem",
+              marginBottom: "0.75rem",
+              borderRadius: "8px",
+              border: `1px solid ${flag.severity === 'high' ? 'var(--error)' : flag.severity === 'medium' ? 'var(--warning)' : 'var(--info)'}`,
+              backgroundColor: `${flag.severity === 'high' ? 'var(--error)' : flag.severity === 'medium' ? 'var(--warning)' : 'var(--info)'}10`
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
+                <span style={{
+                  fontSize: "0.75rem",
+                  fontWeight: "600",
+                  textTransform: "uppercase",
+                  color: flag.severity === 'high' ? 'var(--error)' : flag.severity === 'medium' ? 'var(--warning)' : 'var(--info)'
+                }}>
+                  {flag.severity}
+                </span>
+                <span style={{ fontSize: "0.875rem", fontWeight: "600" }}>{flag.message}</span>
+              </div>
+              {flag.detail && (
+                <div style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>{flag.detail}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <EnhancedComparisonTable comparisonResult={comparisonResult} />
+
+      <div style={{ marginTop: "1rem", background: "rgba(74, 144, 164, 0.1)", padding: "1rem", borderRadius: "10px", fontSize: "0.875rem" }}>
+        <strong>Analysis Note:</strong> This tool detects changes in writing style patterns. Deviations may indicate natural improvement, outside assistance, or use of writing tools. Use results as a starting point for conversation, not definitive proof.
+      </div>
+
+      <button
+        className="btn btn-outline btn-small"
         onClick={() => generateComparisonPDF(comparisonResult, baselineSamples.length)}
         style={{ marginTop: "1rem" }}
       >
-        ↓ Download Comparison PDF
+        Download Comparison PDF
       </button>
     </>
+  );
+}
+
+function EnhancedComparisonTable({ comparisonResult }) {
+  const { metricDeviations } = comparisonResult;
+
+  return (
+    <div style={{ marginTop: "1.5rem" }}>
+      <h3 style={{ marginBottom: "1rem" }}>Detailed Metric Analysis</h3>
+      <table className="comp-table enhanced-comp-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Baseline Range</th>
+            <th>Current</th>
+            <th>Z-Score</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {metricDeviations.map((deviation) => (
+            <tr key={deviation.key}>
+              <td>{deviation.label}</td>
+              <td>
+                {formatRange(deviation.baselineMin, deviation.baselineMax, 1, deviation.suffix)}
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  {formatWithConfidence(deviation.baselineMean, deviation.baselineStdDev, 1, deviation.suffix)}
+                </div>
+              </td>
+              <td style={{ fontWeight: "600" }}>
+                {deviation.currentValue.toFixed(1)}{deviation.suffix}
+              </td>
+              <td style={{ fontWeight: "600" }}>
+                {deviation.zScore.toFixed(2)}
+              </td>
+              <td>
+                <span className={`significance-badge ${deviation.colorClass}`}>
+                  {deviation.significanceLabel}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div style={{ marginTop: "0.75rem", fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
+        <strong>Legend:</strong> Z-score indicates how many standard deviations the current value is from baseline mean.
+        Absolute z-scores above 1.5 warrant attention, above 2.0 are highly significant.
+      </div>
+    </div>
   );
 }
 
@@ -481,23 +880,23 @@ function References() {
           className="btn btn-outline btn-small"
           onClick={generateMethodologyPDF}
         >
-          ↓ Full Math Documentation
+          Full Math Documentation
         </button>
       </div>
       <div className="ref-item">
         <strong>Readability:</strong> Flesch, R. (1948). <em>A new readability yardstick.</em> / Kincaid, J. P., et al. (1975). <em>Derivation of new readability formulas.</em>
-        </div>
+      </div>
       <div className="ref-item">
-        <strong>Sentence Variance (CV):</strong> Coefficient of variation in sentence lengths — a key marker of natural vs. robotic writing rhythm.
+        <strong>Sentence Variance (CV):</strong> Coefficient of variation in sentence lengths measuring natural vs. algorithmic writing rhythm.
       </div>
       <div className="ref-item">
         <strong>Vocabulary & Cohesion:</strong> Based on <em>Coh-Metrix</em> (Graesser, A. C., et al., 2004), analyzing lexical diversity and connective density.
       </div>
       <div className="ref-item">
-        <strong>N-gram Analysis:</strong> Detection of predictable phrase patterns common in template-driven or formulaic writing, based on computational linguistics research.
+        <strong>N-gram Analysis:</strong> Detection of predictable phrase patterns common in template-driven or formulaic writing.
       </div>
       <div className="ref-item">
-        <strong>Paragraph Coherence:</strong> Measures topic continuity via shared content words and transition usage between adjacent paragraphs.
+        <strong>Statistical Methods:</strong> Z-score analysis and standard deviation calculations for measuring deviation from established writing patterns.
       </div>
     </div>
   );
