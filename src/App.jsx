@@ -812,7 +812,21 @@ function ComparisonResults({ comparisonResult, baselineSamples }) {
 
       <button
         className="btn btn-outline btn-small"
-        onClick={() => generateComparisonPDF(comparisonResult, baselineSamples.length)}
+        onClick={() => {
+          // Extract baseline means from profile metrics for PDF generator
+          const baseline = {};
+          const metrics = comparisonResult.profile.metrics;
+          Object.keys(metrics).forEach(key => {
+            baseline[key] = metrics[key].mean;
+          });
+
+          const pdfData = {
+            baseline,
+            current: comparisonResult.current
+          };
+
+          generateComparisonPDF(pdfData, baselineSamples.length);
+        }}
         style={{ marginTop: "1rem" }}
       >
         Download Comparison PDF
