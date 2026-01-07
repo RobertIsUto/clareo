@@ -3,7 +3,7 @@ import "./App.css";
 import { MetricCard } from "./components/MetricCard";
 import { TextHighlighter } from "./components/TextHighlighter";
 import { runFullAnalysis } from "./utils/textAnalysis";
-import { generateAnalysisPDF, generateComparisonPDF } from "./utils/pdfGenerator";
+import { generateAnalysisPDF, generateComparisonPDF, generateMethodologyPDF } from "./utils/pdfGenerator";
 import { getWordCount } from "./utils/textHelpers";
 import { THRESHOLDS } from "./constants/thresholds";
 
@@ -475,7 +475,15 @@ function ComparisonTable({ comparisonResult, baselineSamples }) {
 function References() {
   return (
     <div className="references">
-      <h3>Methodology & Academic References</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <h3 style={{ margin: 0 }}>Methodology & Academic References</h3>
+        <button
+          className="btn btn-outline btn-small"
+          onClick={generateMethodologyPDF}
+        >
+          ↓ Full Math Documentation
+        </button>
+      </div>
       <div className="ref-item">
         <strong>Readability:</strong> Flesch, R. (1948). <em>A new readability yardstick.</em> / Kincaid, J. P., et al. (1975). <em>Derivation of new readability formulas.</em>
         </div>
