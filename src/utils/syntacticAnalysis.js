@@ -238,9 +238,11 @@ export function buildSyntacticProfile(texts) {
   Object.entries(aggregatedOpenings).forEach(([type, values]) => {
     if (values.length > 0) {
       const mean = values.reduce((a, b) => a + b, 0) / values.length;
-      openingPatterns[type] = mean;
+      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+      const stdDev = Math.sqrt(variance);
+      openingPatterns[type] = { mean, stdDev, values };
     } else {
-      openingPatterns[type] = 0;
+      openingPatterns[type] = { mean: 0, stdDev: 0, values: [] };
     }
   });
 
@@ -285,25 +287,30 @@ export function compareSyntacticProfiles(baseline, current) {
   }
 
   const openingDeviations = {};
-  let totalOpeningDeviation = 0;
-  let openingCount = 0;
+  const openingZScores = [];
 
   Object.keys(baseline.openingPatterns).forEach(type => {
-    const baselineValue = baseline.openingPatterns[type] || 0;
+    const baselinePattern = baseline.openingPatterns[type];
     const currentValue = current.openingPatterns[type] || 0;
-    const deviation = Math.abs(currentValue - baselineValue);
+
+    // Calculate Z-score for this opening pattern
+    const zScore = baselinePattern.stdDev > 0
+      ? Math.abs(currentValue - baselinePattern.mean) / baselinePattern.stdDev
+      : 0;
 
     openingDeviations[type] = {
-      baseline: baselineValue,
+      baseline: baselinePattern.mean,
       current: currentValue,
-      deviation
+      zScore
     };
 
-    totalOpeningDeviation += deviation;
-    openingCount++;
+    openingZScores.push(zScore);
   });
 
-  const avgOpeningDeviation = openingCount > 0 ? totalOpeningDeviation / openingCount : 0;
+  // Average of absolute Z-scores for opening patterns (all on same scale now)
+  const avgOpeningDeviation = openingZScores.length > 0
+    ? openingZScores.reduce((sum, z) => sum + z, 0) / openingZScores.length
+    : 0;
 
   const clauseDeviation = baseline.avgClausesPerSentence.stdDev > 0
     ? Math.abs(current.avgClausesPerSentence - baseline.avgClausesPerSentence.mean) /

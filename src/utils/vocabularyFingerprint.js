@@ -72,7 +72,8 @@ export function extractVocabularyProfile(text) {
     lexicalDensity,
     vocabularyEntropy,
     avgWordLength,
-    uniqueWordCount: wordFrequency.size
+    uniqueWordCount: wordFrequency.size,
+    totalWords
   };
 }
 
@@ -169,7 +170,8 @@ export function buildVocabularyProfile(texts) {
     signatureWords,
     avgWordLength,
     lexicalDensity,
-    vocabularyEntropy
+    vocabularyEntropy,
+    totalWords
   };
 }
 
@@ -196,7 +198,12 @@ export function compareVocabularyProfiles(baseline, current) {
   const currentWords = new Set(current.signatureWords.map(sw => sw.word));
 
   const overlap = [...currentWords].filter(w => baselineWords.has(w)).length;
-  const overlapScore = baselineWords.size > 0 ? (overlap / baselineWords.size) * 100 : 0;
+
+  // Symmetric overlap: average of both directions (or use Jaccard index)
+  // This prevents penalizing students for expanding vocabulary while still using baseline words
+  const currentCoverage = currentWords.size > 0 ? (overlap / currentWords.size) * 100 : 0;
+  const baselineCoverage = baselineWords.size > 0 ? (overlap / baselineWords.size) * 100 : 0;
+  const overlapScore = (currentCoverage + baselineCoverage) / 2;
 
   const newWords = [...currentWords].filter(w => !baselineWords.has(w)).slice(0, 10);
 
@@ -215,7 +222,9 @@ export function compareVocabularyProfiles(baseline, current) {
     lexicalDensityDiff,
     entropyDiff,
     newWordsCount: newWords.length,
-    missingWordsCount: missingSignatureWords.length
+    missingWordsCount: missingSignatureWords.length,
+    currentTotalWords: current.totalWords || 1,
+    baselineTotalWords: baseline.totalWords || 1
   });
 
   return {
@@ -241,7 +250,9 @@ function calculateStyleShiftScore(metrics) {
     lexicalDensityDiff,
     entropyDiff,
     newWordsCount,
-    missingWordsCount
+    missingWordsCount,
+    currentTotalWords,
+    baselineTotalWords
   } = metrics;
 
   const overlapPenalty = Math.max(0, 100 - overlapScore);
@@ -252,9 +263,10 @@ function calculateStyleShiftScore(metrics) {
 
   const entropyPenalty = Math.abs(entropyDiff) * 5;
 
-  const newWordsPenalty = newWordsCount * 2;
+  // Normalize by text length: convert raw counts to percentages
+  const newWordsPenalty = (newWordsCount / currentTotalWords) * 100 * 2;
 
-  const missingWordsPenalty = missingWordsCount * 3;
+  const missingWordsPenalty = (missingWordsCount / baselineTotalWords) * 100 * 3;
 
   const totalShift = (
     overlapPenalty * 0.30 +

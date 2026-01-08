@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import "./App.css";
 import { MetricCard } from "./components/MetricCard";
 import { TextHighlighter } from "./components/TextHighlighter";
+import CalculationDrawer from "./components/CalculationDrawer";
 import { runFullAnalysis } from "./utils/textAnalysis";
 import { generateAnalysisPDF, generateComparisonPDF, generateMethodologyPDF } from "./utils/pdfGenerator";
 import { getWordCount, formatRange, formatWithConfidence, getSignificanceLabel, getZScoreColorClass } from "./utils/textHelpers";
@@ -23,6 +24,14 @@ export default function App() {
   const [baselineSamples, setBaselineSamples] = useState([]);
   const [comparisonText, setComparisonText] = useState("");
   const [comparisonResult, setComparisonResult] = useState(null);
+
+  // Calculation drawer state (for comparison section)
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMetric, setDrawerMetric] = useState(null); // null = composite, string = metric key
+
+  // Analysis drawer state (for analysis section)
+  const [analysisDrawerOpen, setAnalysisDrawerOpen] = useState(false);
+  const [analysisDrawerMetric, setAnalysisDrawerMetric] = useState(null);
 
   const wordCount = useMemo(() => getWordCount(analysisText), [analysisText]);
 
@@ -188,24 +197,28 @@ export default function App() {
     const zScores = metricDeviations.map(d => d.zScore);
     const rmsZScore = Math.sqrt(zScores.reduce((sum, z) => sum + z * z, 0) / zScores.length);
 
-    // Penalty based on RMS, not sum - much fairer for multiple metrics
-    const metricScore = Math.max(0, 100 - (rmsZScore * 15));
+    // Use statistically grounded smooth decay instead of arbitrary multipliers
+    // This maps Z-scores to scores: 0→100, 1→80, 2→50, 3→30
+    const metricScore = 100 / (1 + Math.pow(rmsZScore / 2, 2));
 
     const vocabScore = vocabComparison.overlapScore || 50;
 
-    // Syntax deviation penalty - reduced multiplier for more tolerance
-    const syntaxScore = Math.max(0, 100 - (syntaxComparison.overallDeviation * 12));
+    // Apply same statistical decay to syntax deviation (which is already a Z-score-like measure)
+    const syntaxScore = 100 / (1 + Math.pow(syntaxComparison.overallDeviation / 2, 2));
 
-    // Error consistency - penalize suspiciously clean, but less harshly
-    const errorScore = errorComparison.suspiciouslyClean ? 60 :
-      Math.max(0, 100 - (Math.abs(errorComparison.cleanlinessChange) * 0.8));
+    // Error consistency - penalize suspiciously clean proportionally
+    const errorScore = errorComparison.suspiciouslyClean
+      ? Math.max(40, 100 - (Math.abs(errorComparison.cleanlinessChange) * 1.5))  // Bigger penalty but proportional
+      : Math.max(0, 100 - (Math.abs(errorComparison.cleanlinessChange) * 0.8));
 
     let specialPenalty = 0;
     if (errorComparison.suspiciouslyClean) {
       specialPenalty += 10;
     }
     if (significantDeviations.length >= 3) {
-      specialPenalty += 15;
+      // Scale penalty with number of deviations, capped at 20
+      const deviationPenalty = Math.min(20, significantDeviations.length * 5);
+      specialPenalty += deviationPenalty;
     }
 
     const compositeScore = (
@@ -288,7 +301,7 @@ export default function App() {
    * Run comprehensive comparison analysis
    */
   const runComparison = useCallback(() => {
-    if (baselineSamples.length === 0 || !comparisonText.trim()) return;
+    if (baselineSamples.length < STATISTICAL_THRESHOLDS.MIN_BASELINE_SAMPLES || !comparisonText.trim()) return;
 
     const current = runFullAnalysis(comparisonText);
 
@@ -336,6 +349,32 @@ export default function App() {
       flags
     });
   }, [baselineSamples, comparisonText, buildStudentProfile, calculateMetricDeviations, calculateCompositeScore, generateStyleChangeFlags]);
+
+  /**
+   * Click handlers for calculation drawer
+   */
+  const handleMetricClick = useCallback((metricKey) => {
+    setDrawerMetric(metricKey);
+    setDrawerOpen(true);
+  }, []);
+
+  const handleCompositeClick = useCallback(() => {
+    setDrawerMetric(null); // null indicates composite score
+    setDrawerOpen(true);
+  }, []);
+
+  /**
+   * Click handlers for analysis drawer
+   */
+  const handleAnalysisMetricClick = useCallback((metricKey) => {
+    setAnalysisDrawerMetric(metricKey);
+    setAnalysisDrawerOpen(true);
+  }, []);
+
+  const handleDrawerClose = useCallback(() => {
+    setDrawerOpen(false);
+    setAnalysisDrawerOpen(false);
+  }, []);
 
   return (
     <div className="clareo-app">
@@ -385,11 +424,30 @@ export default function App() {
             setComparisonText={setComparisonText}
             runComparison={runComparison}
             comparisonResult={comparisonResult}
+            onCompositeClick={handleCompositeClick}
+            onMetricClick={handleMetricClick}
           />
         )}
       </div>
 
       <References />
+
+      {/* Calculation Drawer - Comparison Mode */}
+      <CalculationDrawer
+        isOpen={drawerOpen}
+        onClose={handleDrawerClose}
+        metricKey={drawerMetric}
+        comparisonResult={comparisonResult}
+        baselineSamples={baselineSamples}
+      />
+
+      {/* Calculation Drawer - Analysis Mode */}
+      <CalculationDrawer
+        isOpen={analysisDrawerOpen}
+        onClose={handleDrawerClose}
+        metricKey={analysisDrawerMetric}
+        analysisResults={results}
+      />
     </div>
   );
 }
@@ -463,18 +521,24 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           value={results.readability.grade}
           label="Grade Level"
           tooltip="Flesch-Kincaid Grade Level"
+          clickable={true}
+          onClick={() => handleAnalysisMetricClick('gradeLevel')}
         />
         <MetricCard
           value={results.variation.cv + "%"}
           label="Sentence Var"
           sublabel="Low < 25%"
           tooltip="Coefficient of Variation in sentence length"
+          clickable={true}
+          onClick={() => handleAnalysisMetricClick('sentenceVariance')}
         />
         <MetricCard
           value={results.vocabulary.sTTR + "%"}
           label="Vocab Variety"
           sublabel="MSTTR"
           tooltip="Mean-Segmental Type-Token Ratio"
+          clickable={true}
+          onClick={() => handleAnalysisMetricClick('vocabVariety')}
         />
         <MetricCard
           value={results.formalRegister.totalWeight}
@@ -482,6 +546,8 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           sublabel={results.formalRegister.totalCount + " phrases"}
           warning={results.formalRegister.totalWeight > THRESHOLDS.HIGH_FORMULAIC ? "High" : null}
           tooltip="Weighted score of formulaic/stock phrases"
+          clickable={true}
+          onClick={() => handleAnalysisMetricClick('formulaic')}
         />
         <MetricCard
           value={results.ngrams.predictabilityScore + "%"}
@@ -489,6 +555,8 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           sublabel="N-gram score"
           warning={parseInt(results.ngrams.predictabilityScore) > THRESHOLDS.HIGH_PREDICTABILITY ? "Elevated" : null}
           tooltip="Based on common formulaic n-gram patterns"
+          clickable={true}
+          onClick={() => handleAnalysisMetricClick('predictability')}
         />
       </div>
 
@@ -589,16 +657,18 @@ function AdvancedSection({ results, showAdvanced, setShowAdvanced }) {
   );
 }
 
-function ComparisonSection({ baselineInput, setBaselineInput, assignmentType, setAssignmentType, addBaselineSample, baselineSamples, removeBaseline, comparisonText, setComparisonText, runComparison, comparisonResult }) {
+function ComparisonSection({ baselineInput, setBaselineInput, assignmentType, setAssignmentType, addBaselineSample, baselineSamples, removeBaseline, comparisonText, setComparisonText, runComparison, comparisonResult, onCompositeClick, onMetricClick }) {
   const profileQuality = useMemo(() => {
     if (baselineSamples.length === 0) return null;
 
     if (baselineSamples.length >= STATISTICAL_THRESHOLDS.STRONG_BASELINE_SAMPLES) {
-      return { level: 'strong', color: 'var(--success)', label: 'Strong' };
+      return { level: 'excellent', color: 'var(--success)', label: 'Excellent' };
     } else if (baselineSamples.length >= STATISTICAL_THRESHOLDS.RECOMMENDED_BASELINE_SAMPLES) {
       return { level: 'good', color: 'var(--info)', label: 'Good' };
+    } else if (baselineSamples.length >= STATISTICAL_THRESHOLDS.ZSCORE_THRESHOLD_SAMPLES) {
+      return { level: 'adequate', color: 'var(--warning)', label: 'Adequate' };
     } else if (baselineSamples.length >= STATISTICAL_THRESHOLDS.MIN_BASELINE_SAMPLES) {
-      return { level: 'weak', color: 'var(--warning)', label: 'Weak' };
+      return { level: 'limited', color: 'var(--caution)', label: 'Limited' };
     }
     return { level: 'insufficient', color: 'var(--error)', label: 'Insufficient' };
   }, [baselineSamples.length]);
@@ -609,7 +679,7 @@ function ComparisonSection({ baselineInput, setBaselineInput, assignmentType, se
         <h2>1. Build Student Profile</h2>
 
         <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
-          Add 3+ past assignments to create a reliable baseline average. More samples improve accuracy.
+          Add past assignments to build a writing profile. The more samples you provide, the more accurate the analysis.
         </p>
 
         <div style={{ marginBottom: "0.75rem" }}>
@@ -664,9 +734,14 @@ function ComparisonSection({ baselineInput, setBaselineInput, assignmentType, se
             fontSize: "0.875rem"
           }}>
             <strong>Profile Quality: {profileQuality.label}</strong>
-            {baselineSamples.length < STATISTICAL_THRESHOLDS.STRONG_BASELINE_SAMPLES && (
+            {baselineSamples.length < STATISTICAL_THRESHOLDS.ZSCORE_THRESHOLD_SAMPLES && (
               <div style={{ marginTop: "0.25rem", color: "var(--text-secondary)" }}>
-                Add {STATISTICAL_THRESHOLDS.STRONG_BASELINE_SAMPLES - baselineSamples.length} more sample(s) for stronger analysis
+                Add more samples to enable advanced statistical analysis
+              </div>
+            )}
+            {baselineSamples.length >= STATISTICAL_THRESHOLDS.ZSCORE_THRESHOLD_SAMPLES && baselineSamples.length < STATISTICAL_THRESHOLDS.STRONG_BASELINE_SAMPLES && (
+              <div style={{ marginTop: "0.25rem", color: "var(--text-secondary)" }}>
+                Adding more samples will continue to improve accuracy
               </div>
             )}
           </div>
@@ -700,7 +775,7 @@ function ComparisonSection({ baselineInput, setBaselineInput, assignmentType, se
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
-              if (baselineSamples.length > 0 && comparisonText.trim()) {
+              if (baselineSamples.length >= STATISTICAL_THRESHOLDS.MIN_BASELINE_SAMPLES && comparisonText.trim()) {
                 runComparison();
               }
             }
@@ -709,18 +784,18 @@ function ComparisonSection({ baselineInput, setBaselineInput, assignmentType, se
         <button
           className="btn"
           onClick={runComparison}
-          disabled={baselineSamples.length === 0 || !comparisonText.trim()}
+          disabled={baselineSamples.length < STATISTICAL_THRESHOLDS.MIN_BASELINE_SAMPLES || !comparisonText.trim()}
         >
           Compare vs Profile
         </button>
 
-        {comparisonResult && <ComparisonResults comparisonResult={comparisonResult} baselineSamples={baselineSamples} />}
+        {comparisonResult && <ComparisonResults comparisonResult={comparisonResult} baselineSamples={baselineSamples} onCompositeClick={onCompositeClick} onMetricClick={onMetricClick} />}
       </div>
     </div>
   );
 }
 
-function ComparisonResults({ comparisonResult, baselineSamples }) {
+function ComparisonResults({ comparisonResult, baselineSamples, onCompositeClick, onMetricClick }) {
   const { consistencyScore, flags, metricDeviations, profile } = comparisonResult;
 
   const getScoreColor = (score) => {
@@ -741,13 +816,17 @@ function ComparisonResults({ comparisonResult, baselineSamples }) {
 
   return (
     <>
-      <div style={{
-        marginTop: "1.5rem",
-        padding: "1.5rem",
-        borderRadius: "12px",
-        border: `2px solid ${getScoreColor(consistencyScore)}`,
-        backgroundColor: `${getScoreColor(consistencyScore)}10`
-      }}>
+      <div
+        className="clickable-score-card"
+        onClick={() => onCompositeClick && onCompositeClick()}
+        style={{
+          marginTop: "1.5rem",
+          padding: "1.5rem",
+          borderRadius: "12px",
+          border: `2px solid ${getScoreColor(consistencyScore)}`,
+          backgroundColor: `${getScoreColor(consistencyScore)}10`
+        }}
+      >
         <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
           Style Consistency Score
         </div>
@@ -807,7 +886,7 @@ function ComparisonResults({ comparisonResult, baselineSamples }) {
         </div>
       )}
 
-      <EnhancedComparisonTable comparisonResult={comparisonResult} />
+      <EnhancedComparisonTable comparisonResult={comparisonResult} baselineSamples={baselineSamples} onMetricClick={onMetricClick} />
 
       <div style={{ marginTop: "1rem", background: "rgba(74, 144, 164, 0.1)", padding: "1rem", borderRadius: "10px", fontSize: "0.875rem" }}>
         <strong>Analysis Note:</strong> This tool detects changes in writing style patterns. Deviations may indicate natural improvement, outside assistance, or use of writing tools. Use results as a starting point for conversation, not definitive proof.
@@ -838,8 +917,9 @@ function ComparisonResults({ comparisonResult, baselineSamples }) {
   );
 }
 
-function EnhancedComparisonTable({ comparisonResult }) {
+function EnhancedComparisonTable({ comparisonResult, baselineSamples, onMetricClick }) {
   const { metricDeviations } = comparisonResult;
+  const showZScores = baselineSamples.length >= STATISTICAL_THRESHOLDS.ZSCORE_THRESHOLD_SAMPLES;
 
   return (
     <div style={{ marginTop: "1.5rem" }}>
@@ -850,13 +930,18 @@ function EnhancedComparisonTable({ comparisonResult }) {
             <th>Metric</th>
             <th>Baseline Range</th>
             <th>Current</th>
-            <th>Z-Score</th>
+            {showZScores && <th>Z-Score</th>}
             <th>Status</th>
           </tr>
         </thead>
         <tbody>
           {metricDeviations.map((deviation) => (
-            <tr key={deviation.key}>
+            <tr
+              key={deviation.key}
+              className="clickable-metric-row"
+              onClick={() => onMetricClick && onMetricClick(deviation.key)}
+              title="Click to see how this metric is calculated"
+            >
               <td>{deviation.label}</td>
               <td>
                 {formatRange(deviation.baselineMin, deviation.baselineMax, 1, deviation.suffix)}
@@ -867,9 +952,11 @@ function EnhancedComparisonTable({ comparisonResult }) {
               <td style={{ fontWeight: "600" }}>
                 {deviation.currentValue.toFixed(1)}{deviation.suffix}
               </td>
-              <td style={{ fontWeight: "600" }}>
-                {deviation.zScore.toFixed(2)}
-              </td>
+              {showZScores && (
+                <td style={{ fontWeight: "600" }}>
+                  {deviation.zScore.toFixed(2)}
+                </td>
+              )}
               <td>
                 <span className={`significance-badge ${deviation.colorClass}`}>
                   {deviation.significanceLabel}
@@ -881,8 +968,16 @@ function EnhancedComparisonTable({ comparisonResult }) {
       </table>
 
       <div style={{ marginTop: "0.75rem", fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-        <strong>Legend:</strong> Z-score indicates how many standard deviations the current value is from baseline mean.
-        Absolute z-scores above 1.5 warrant attention, above 2.0 are highly significant.
+        {showZScores ? (
+          <>
+            <strong>Legend:</strong> Z-score indicates how many standard deviations the current value is from baseline mean.
+            Absolute z-scores above 1.5 warrant attention, above 2.0 are highly significant.
+          </>
+        ) : (
+          <>
+            <strong>Note:</strong> Z-scores will be displayed when you have {STATISTICAL_THRESHOLDS.ZSCORE_THRESHOLD_SAMPLES}+ baseline samples for more reliable statistical analysis.
+          </>
+        )}
       </div>
     </div>
   );
