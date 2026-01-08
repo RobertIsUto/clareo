@@ -1190,18 +1190,19 @@ select option {
 }
 
 .clickable-metric-row:hover::after {
-  content: 'ℹ️ Click for calculation details';
+  content: 'View calculation';
   position: absolute;
   right: 1rem;
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--primary);
   background: white;
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   pointer-events: none;
+  font-weight: 500;
 }
 
 .clickable-score-card {
@@ -1216,12 +1217,13 @@ select option {
 }
 
 .clickable-score-card::after {
-  content: 'Click to see how this score is calculated';
+  content: 'View calculation breakdown';
   display: block;
   margin-top: 0.5rem;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--primary);
   text-align: center;
+  font-weight: 500;
 }
 
 .clickable-metric-card {
@@ -1236,12 +1238,14 @@ select option {
 }
 
 .clickable-metric-card:hover::after {
-  content: 'ℹ️';
+  content: 'View details';
   position: absolute;
-  top: 0.5rem;
+  bottom: 0.5rem;
   right: 0.5rem;
-  font-size: 0.875rem;
-  opacity: 0.6;
+  font-size: 0.7rem;
+  color: var(--primary);
+  font-weight: 500;
+  opacity: 0.85;
 }
 
 /* Responsive Design */

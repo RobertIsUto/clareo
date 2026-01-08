@@ -408,6 +408,7 @@ export default function App() {
             setHighlightMode={setHighlightMode}
             showAdvanced={showAdvanced}
             setShowAdvanced={setShowAdvanced}
+            onMetricClick={handleAnalysisMetricClick}
           />
         )}
 
@@ -452,7 +453,7 @@ export default function App() {
   );
 }
 
-function AnalysisSection({ analysisText, setAnalysisText, wordCount, handleAnalyze, results, highlightMode, setHighlightMode, showAdvanced, setShowAdvanced }) {
+function AnalysisSection({ analysisText, setAnalysisText, wordCount, handleAnalyze, results, highlightMode, setHighlightMode, showAdvanced, setShowAdvanced, onMetricClick }) {
   return (
     <div className="grid">
       <div className="panel">
@@ -522,7 +523,7 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           label="Grade Level"
           tooltip="Flesch-Kincaid Grade Level"
           clickable={true}
-          onClick={() => handleAnalysisMetricClick('gradeLevel')}
+          onClick={() => onMetricClick('gradeLevel')}
         />
         <MetricCard
           value={results.variation.cv + "%"}
@@ -530,7 +531,7 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           sublabel="Low < 25%"
           tooltip="Coefficient of Variation in sentence length"
           clickable={true}
-          onClick={() => handleAnalysisMetricClick('sentenceVariance')}
+          onClick={() => onMetricClick('sentenceVariance')}
         />
         <MetricCard
           value={results.vocabulary.sTTR + "%"}
@@ -538,7 +539,7 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           sublabel="MSTTR"
           tooltip="Mean-Segmental Type-Token Ratio"
           clickable={true}
-          onClick={() => handleAnalysisMetricClick('vocabVariety')}
+          onClick={() => onMetricClick('vocabVariety')}
         />
         <MetricCard
           value={results.formalRegister.totalWeight}
@@ -547,7 +548,7 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           warning={results.formalRegister.totalWeight > THRESHOLDS.HIGH_FORMULAIC ? "High" : null}
           tooltip="Weighted score of formulaic/stock phrases"
           clickable={true}
-          onClick={() => handleAnalysisMetricClick('formulaic')}
+          onClick={() => onMetricClick('formulaic')}
         />
         <MetricCard
           value={results.ngrams.predictabilityScore + "%"}
@@ -556,7 +557,7 @@ function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced
           warning={parseInt(results.ngrams.predictabilityScore) > THRESHOLDS.HIGH_PREDICTABILITY ? "Elevated" : null}
           tooltip="Based on common formulaic n-gram patterns"
           clickable={true}
-          onClick={() => handleAnalysisMetricClick('predictability')}
+          onClick={() => onMetricClick('predictability')}
         />
       </div>
 
