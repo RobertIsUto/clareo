@@ -20,9 +20,9 @@ export const STATISTICAL_THRESHOLDS = {
   OUTLIER_ZSCORE_THRESHOLD: 2.5,
 
   SIGNIFICANCE_LEVELS: {
-    LOW: 1.0,
-    MEDIUM: 1.5,
-    HIGH: 2.0
+    LOW: 1.5,
+    MEDIUM: 2.0,
+    HIGH: 3.0
   },
 
   VARIANCE_LEVELS: {
@@ -59,8 +59,8 @@ export const STATISTICAL_THRESHOLDS = {
 };
 
 export const COMPOSITE_SCORE_WEIGHTS = {
-  METRIC_DEVIATIONS: 0.35,
-  VOCABULARY_OVERLAP: 0.15,
+  METRIC_DEVIATIONS: 0.40,
+  VOCABULARY_OVERLAP: 0.10,
   SYNTACTIC_PATTERNS: 0.30,
   ERROR_CONSISTENCY: 0.15,
   SPECIAL_PENALTIES: 0.05
@@ -73,7 +73,7 @@ export const STYLE_CHANGE_FLAGS = {
     message: 'Error rate suspiciously low compared to baseline'
   },
   VOCABULARY_SHIFT: {
-    threshold: 40,
+    threshold: 30,
     severity: 'medium',
     message: 'Vocabulary overlap significantly lower than expected'
   },
@@ -83,17 +83,17 @@ export const STYLE_CHANGE_FLAGS = {
     message: 'Multiple metrics showing simultaneous significant deviations'
   },
   SYNTACTIC_SHIFT: {
-    threshold: 2.0,
+    threshold: 2.5,
     severity: 'medium',
     message: 'Sentence structure patterns differ significantly from baseline'
   },
   SOPHISTICATION_JUMP: {
-    threshold: 2.5,
+    threshold: 3.0,
     severity: 'medium',
     message: 'Vocabulary sophistication increased significantly'
   },
   FORMULAIC_INCREASE: {
-    threshold: 1.5,
+    threshold: 2.0,
     severity: 'low',
     message: 'Increase in formulaic language usage'
   }
