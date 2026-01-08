@@ -193,16 +193,60 @@ export function compareVocabularyProfiles(baseline, current) {
     };
   }
 
+  // 1. Content Word Analysis (Topic Consistency)
   const baselineWords = new Set(baseline.signatureWords.map(sw => sw.word));
   const currentWords = new Set(current.signatureWords.map(sw => sw.word));
 
   const overlap = [...currentWords].filter(w => baselineWords.has(w)).length;
 
-  // Symmetric overlap: average of both directions (or use Jaccard index)
-  // This prevents penalizing students for expanding vocabulary while still using baseline words
+  // Symmetric overlap: average of both directions
   const currentCoverage = currentWords.size > 0 ? (overlap / currentWords.size) * 100 : 0;
   const baselineCoverage = baselineWords.size > 0 ? (overlap / baselineWords.size) * 100 : 0;
-  const overlapScore = (currentCoverage + baselineCoverage) / 2;
+  const contentOverlapScore = (currentCoverage + baselineCoverage) / 2;
+
+  // 2. Function Word Analysis (Style Consistency)
+  // This is more robust to topic changes as it measures "bridge" vocabulary
+  const baselineFreq = baseline.combinedFrequency || baseline.wordFrequency;
+  const currentFreq = current.wordFrequency;
+  const baselineTotal = baseline.totalWords || 1;
+  const currentTotal = current.totalWords || 1;
+
+  let functionSimilaritySum = 0;
+  let functionWordCount = 0;
+
+  // Check top function words to see if usage rates are similar
+  // We use the predefined set of high frequency words as our "style" corpus
+  HIGH_FREQUENCY_WORDS.forEach(word => {
+    const baseCount = baselineFreq.get(word) || 0;
+    const currCount = currentFreq.get(word) || 0;
+
+    // Only consider if at least one text uses the word
+    if (baseCount > 0 || currCount > 0) {
+      const baseRate = (baseCount / baselineTotal) * 1000; // Rate per 1000 words
+      const currRate = (currCount / currentTotal) * 1000;
+
+      // Calculate similarity: 100% - percent difference
+      // We dampen the penalty for very rare words to avoid noise
+      const maxRate = Math.max(baseRate, currRate);
+      const diff = Math.abs(baseRate - currRate);
+      
+      // Similarity formula: closer rates = higher score
+      // We use a decay function so small differences don't penalize too much
+      const similarity = 100 / (1 + (diff / (maxRate * 0.5 || 1)));
+      
+      // Weight more common words higher
+      const weight = Math.log(baseCount + currCount + 1);
+      
+      functionSimilaritySum += similarity * weight;
+      functionWordCount += weight;
+    }
+  });
+
+  const functionOverlapScore = functionWordCount > 0 ? functionSimilaritySum / functionWordCount : 50;
+
+  // 3. Composite Overlap Score
+  // Weighted 70% Function (Style) / 30% Content (Topic) to allow for topic changes
+  const overlapScore = (functionOverlapScore * 0.7) + (contentOverlapScore * 0.3);
 
   const newWords = [...currentWords].filter(w => !baselineWords.has(w)).slice(0, 10);
 
@@ -228,6 +272,8 @@ export function compareVocabularyProfiles(baseline, current) {
 
   return {
     overlapScore,
+    contentOverlapScore, // Return for debugging/advanced view if needed
+    functionOverlapScore, // Return for debugging/advanced view if needed
     newWords,
     missingSignatureWords,
     styleShiftScore,
