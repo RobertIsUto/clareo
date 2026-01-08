@@ -60,8 +60,8 @@ export const STATISTICAL_THRESHOLDS = {
 
 export const COMPOSITE_SCORE_WEIGHTS = {
   METRIC_DEVIATIONS: 0.35,
-  VOCABULARY_OVERLAP: 0.25,
-  SYNTACTIC_PATTERNS: 0.20,
+  VOCABULARY_OVERLAP: 0.15,
+  SYNTACTIC_PATTERNS: 0.30,
   ERROR_CONSISTENCY: 0.15,
   SPECIAL_PENALTIES: 0.05
 };
@@ -88,7 +88,7 @@ export const STYLE_CHANGE_FLAGS = {
     message: 'Sentence structure patterns differ significantly from baseline'
   },
   SOPHISTICATION_JUMP: {
-    threshold: 1.8,
+    threshold: 2.5,
     severity: 'medium',
     message: 'Vocabulary sophistication increased significantly'
   },

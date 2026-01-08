@@ -260,7 +260,7 @@ export default function App() {
     }
 
     const sophisticationDeviation = metricDeviations.find(d => d.key === 'sophistication');
-    if (sophisticationDeviation && Math.abs(sophisticationDeviation.zScore) >= STYLE_CHANGE_FLAGS.SOPHISTICATION_JUMP.threshold) {
+    if (sophisticationDeviation && sophisticationDeviation.zScore >= STYLE_CHANGE_FLAGS.SOPHISTICATION_JUMP.threshold) {
       flags.push({
         type: 'SOPHISTICATION_JUMP',
         severity: 'medium',
