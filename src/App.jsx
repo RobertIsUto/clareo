@@ -183,20 +183,22 @@ export default function App() {
    * Higher scores indicate better consistency with baseline
    */
   const calculateCompositeScore = useCallback((metricDeviations, vocabComparison, syntaxComparison, errorComparison) => {
-    let metricScore = 100;
+    // Calculate RMS (Root Mean Square) of z-scores to avoid unfair accumulation across many metrics
     const significantDeviations = metricDeviations.filter(d => d.isSignificant);
-    metricDeviations.forEach(deviation => {
-      const penalty = Math.abs(deviation.zScore) * 5;
-      metricScore -= penalty;
-    });
-    metricScore = Math.max(0, metricScore);
+    const zScores = metricDeviations.map(d => d.zScore);
+    const rmsZScore = Math.sqrt(zScores.reduce((sum, z) => sum + z * z, 0) / zScores.length);
+
+    // Penalty based on RMS, not sum - much fairer for multiple metrics
+    const metricScore = Math.max(0, 100 - (rmsZScore * 15));
 
     const vocabScore = vocabComparison.overlapScore || 50;
 
-    const syntaxScore = Math.max(0, 100 - (syntaxComparison.overallDeviation * 20));
+    // Syntax deviation penalty - reduced multiplier for more tolerance
+    const syntaxScore = Math.max(0, 100 - (syntaxComparison.overallDeviation * 12));
 
-    const errorScore = errorComparison.suspiciouslyClean ? 50 :
-      Math.max(0, 100 - Math.abs(errorComparison.cleanlinessChange));
+    // Error consistency - penalize suspiciously clean, but less harshly
+    const errorScore = errorComparison.suspiciouslyClean ? 60 :
+      Math.max(0, 100 - (Math.abs(errorComparison.cleanlinessChange) * 0.8));
 
     let specialPenalty = 0;
     if (errorComparison.suspiciouslyClean) {
