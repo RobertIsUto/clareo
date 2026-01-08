@@ -498,6 +498,7 @@ function AnalysisSection({ analysisText, setAnalysisText, wordCount, handleAnaly
             setHighlightMode={setHighlightMode}
             showAdvanced={showAdvanced}
             setShowAdvanced={setShowAdvanced}
+            onMetricClick={onMetricClick}
           />
         )}
       </div>
@@ -505,7 +506,7 @@ function AnalysisSection({ analysisText, setAnalysisText, wordCount, handleAnaly
   );
 }
 
-function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced, setShowAdvanced }) {
+function ResultsDisplay({ results, highlightMode, setHighlightMode, showAdvanced, setShowAdvanced, onMetricClick }) {
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
