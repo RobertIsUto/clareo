@@ -1,4 +1,5 @@
 import { COMPOSITE_SCORE_WEIGHTS, STATISTICAL_THRESHOLDS } from '../constants/thresholds.js';
+import { FORMAL_REGISTER_PHRASES } from '../constants/phrases.js';
 
 /**
  * Prepare calculation breakdown for an individual metric's Z-score
@@ -395,14 +396,15 @@ function prepareVocabVarietyCalculation(results) {
 
 function prepareFormulaicCalculation(results) {
   const { formalRegister } = results;
+  const databaseSize = FORMAL_REGISTER_PHRASES.length;
 
   return {
     steps: [
       {
         title: 'Detect Formulaic Phrases',
         formula: null,
-        substitution: `Matched against database of ${formalRegister.totalCount} stock phrases`,
-        result: `Found ${formalRegister.totalCount} formulaic phrases`,
+        substitution: `Scanned text against database of ${databaseSize} known formulaic phrases`,
+        result: `Found ${formalRegister.totalCount} formulaic phrases in this text`,
         interpretation: 'Formulaic phrases include clichés, transition phrases, and template language commonly found in AI-generated text.'
       },
       {
