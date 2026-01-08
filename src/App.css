@@ -17,11 +17,12 @@
   --text-secondary: #5B6B7C;
   --text-muted: #8995A3;
 
-  /* Semantic Colors */
-  --success: #52B788;
-  --warning: #F4A261;
-  --error: #E76F51;
-  --info: #4A90A4;
+  /* Semantic Colors - Softer palette for expected deviations */
+  --success: #6FCEA5;      /* Softer green: 90-100 */
+  --info: #6BA3B8;         /* Softer blue: 70-89 */
+  --warning: #F7C566;      /* Soft yellow: 50-69 */
+  --caution: #F4A883;      /* Soft amber: 30-49 */
+  --error: #EF9A85;        /* Softer coral: 0-29 */
 
   /* Borders & Shadows */
   --border-light: #E5E8EB;

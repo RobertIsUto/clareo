@@ -725,6 +725,7 @@ function ComparisonResults({ comparisonResult, baselineSamples }) {
     if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.EXCELLENT) return 'var(--success)';
     if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.GOOD) return 'var(--info)';
     if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.MODERATE) return 'var(--warning)';
+    if (score >= STATISTICAL_THRESHOLDS.CONSISTENCY_SCORE_RANGES.CONCERNING) return 'var(--caution)';
     return 'var(--error)';
   };
 
