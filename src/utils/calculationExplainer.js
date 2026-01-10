@@ -113,7 +113,7 @@ export function prepareCompositeCalculation(comparisonResult) {
     title: 'Syntactic Patterns Component',
     formula: 'syntaxScore = 100 / (1 + (deviation/2)²)',
     substitution: `100 / (1 + (${syntaxComparison.overallDeviation.toFixed(2)}/2)²) = ${syntaxScore.toFixed(1)}`,
-    result: `${syntaxScore.toFixed(1)} × 30% weight = ${(syntaxScore * 0.30).toFixed(1)} points`,
+    result: `${syntaxScore.toFixed(1)} × 35% weight = ${(syntaxScore * 0.35).toFixed(1)} points`,
     interpretation: 'Based on Z-score deviations in sentence structure, clause usage, and opening patterns (now all on same statistical scale).'
   });
 
@@ -146,7 +146,7 @@ export function prepareCompositeCalculation(comparisonResult) {
   steps.push({
     title: 'Sum Weighted Components',
     formula: 'sum of all weighted scores',
-    substitution: `${(metricScore * 0.40).toFixed(1)} + ${(vocabScore * 0.10).toFixed(1)} + ${(syntaxScore * 0.30).toFixed(1)} + ${(errorScore * 0.15).toFixed(1)}`,
+    substitution: `${(metricScore * 0.40).toFixed(1)} + ${(vocabScore * 0.10).toFixed(1)} + ${(syntaxScore * 0.35).toFixed(1)} + ${(errorScore * 0.15).toFixed(1)}`,
     result: `${weightedSum.toFixed(1)} points`,
     interpretation: null
   });
@@ -194,7 +194,7 @@ export function prepareCompositeCalculation(comparisonResult) {
     components: {
       metricScore: metricScore * 0.40,
       vocabScore: vocabScore * 0.10,
-      syntaxScore: syntaxScore * 0.30,
+      syntaxScore: syntaxScore * 0.35,
       errorScore: errorScore * 0.15,
       specialPenalty
     },
@@ -222,13 +222,13 @@ function interpretZScore(zScore, metricLabel, isHigher) {
   const direction = isHigher ? 'higher' : 'lower';
 
   if (absZ < 1.0) {
-    return `This ${metricLabel.toLowerCase()} is **within normal variation** for this student. The difference is not statistically significant.`;
+    return `This ${metricLabel.toLowerCase()} is within normal variation for this student. The difference is not statistically significant.`;
   } else if (absZ < 1.5) {
     return `This ${metricLabel.toLowerCase()} is slightly ${direction} than usual (${absZ.toFixed(1)} standard deviations), but still within an expected range.`;
   } else if (absZ < 2.0) {
-    return `This ${metricLabel.toLowerCase()} is **notably ${direction}** than the student's baseline (${absZ.toFixed(1)} standard deviations). This warrants attention and conversation.`;
+    return `This ${metricLabel.toLowerCase()} is notably ${direction} than the student's baseline (${absZ.toFixed(1)} standard deviations). This warrants attention and conversation.`;
   } else {
-    return `This ${metricLabel.toLowerCase()} is **significantly ${direction}** than baseline (${absZ.toFixed(1)} standard deviations). This is a strong statistical indicator of style change.`;
+    return `This ${metricLabel.toLowerCase()} is significantly ${direction} than baseline (${absZ.toFixed(1)} standard deviations). This is a strong statistical indicator of style change.`;
   }
 }
 
@@ -246,15 +246,15 @@ function interpretRmsZScore(rmsZScore) {
 
 function interpretCompositeScore(score) {
   if (score >= 90) {
-    return '**Highly Consistent**: Writing is very well-aligned with the student\'s established patterns across all measures.';
+    return 'Highly Consistent: Writing is very well-aligned with the student\'s established patterns across all measures.';
   } else if (score >= 70) {
-    return '**Generally Consistent**: Writing shows good alignment with baseline with some minor variations that could be natural.';
+    return 'Generally Consistent: Writing shows good alignment with baseline with some minor variations that could be natural.';
   } else if (score >= 50) {
-    return '**Noticeable Deviation**: Clear differences from baseline patterns detected. This may warrant a conversation about the writing process.';
+    return 'Noticeable Deviation: Clear differences from baseline patterns detected. This may warrant a conversation about the writing process.';
   } else if (score >= 30) {
-    return '**Significant Deviation**: Substantial stylistic differences suggest possible external influence or assistance. Recommend discussing with student.';
+    return 'Significant Deviation: Substantial stylistic differences suggest possible external influence or assistance. Recommend discussing with student.';
   } else {
-    return '**Dramatic Change**: Very large style changes detected across multiple dimensions. Strong recommendation to have a conversation with the student about their writing process.';
+    return 'Dramatic Change: Very large style changes detected across multiple dimensions. Strong recommendation to have a conversation with the student about their writing process.';
   }
 }
 

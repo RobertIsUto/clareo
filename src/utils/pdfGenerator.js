@@ -425,7 +425,7 @@ export const generateMethodologyPDF = () => {
       <p>The Composite Consistency Score represents the overall alignment between the current text and the student's established baseline. It is calculated as a weighted sum of four components, minus specific penalties.</p>
 
       <div class="formula-box">
-        <div class="formula">Score = (M × 0.40) + (V × 0.10) + (S × 0.30) + (E × 0.15) - Penalties</div>
+        <div class="formula">Score = (M × 0.40) + (V × 0.10) + (S × 0.35) + (E × 0.15) - Penalties</div>
         <div class="variables">
           <div class="variable-item"><strong>M</strong> = Metric Deviation Score (based on RMS Z-Score)</div>
           <div class="variable-item"><strong>V</strong> = Vocabulary Overlap Score</div>
@@ -451,7 +451,7 @@ export const generateMethodologyPDF = () => {
         </div>
       </div>
 
-      <h3>8.3 Syntactic Pattern Score (30% Weight)</h3>
+      <h3>8.3 Syntactic Pattern Score (35% Weight)</h3>
       <div class="formula-box">
         <div class="formula">S = 100 / (1 + (Deviation / 2)²)</div>
         <div class="variables">

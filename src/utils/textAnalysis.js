@@ -12,6 +12,18 @@ const sentenceRegex = /[^.!?]+[.!?]+|[^.!?]+$/g;
 const wordRegex = /[a-z]+(?:[''][a-z]+)?/gi;
 const passivePatterns = /\b(is|are|was|were|been|being|be)\s+(\w+ed|written|spoken|taken|given|made|done|seen|known|found|thought|begun|broken|chosen|driven|eaten|fallen|forgotten|frozen|gotten|grown|hidden|ridden|risen|shaken|stolen|thrown|worn)\b/gi;
 
+// Common abbreviations that shouldn't end sentences
+const ABBREVIATIONS = new Set([
+  'dr', 'mr', 'mrs', 'ms', 'prof', 'sr', 'jr', 'vs', 'etc', 'inc', 'ltd',
+  'st', 'ave', 'blvd', 'rd', 'apt', 'no', 'vol', 'pg', 'pp', 'ed', 'eds',
+  'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+  'fig', 'al', 'approx', 'dept', 'est', 'govt', 'max', 'min', 'misc', 'ref'
+]);
+
+// Placeholder characters for protected periods
+const DECIMAL_PLACEHOLDER = '\u0000';
+const ABBREV_PLACEHOLDER = '\u0001';
+
 export function countSyllables(word) {
   word = word.toLowerCase().replace(/[^a-z]/g, "");
   if (word.length <= 3) return 1;
@@ -21,15 +33,57 @@ export function countSyllables(word) {
   return matches ? matches.length : 1;
 }
 
+/**
+ * Protect periods that shouldn't be treated as sentence endings
+ * @param {string} text - The input text
+ * @returns {string} Text with protected periods replaced with placeholders
+ */
+function protectPeriods(text) {
+  let processed = text;
+
+  // Protect decimal numbers (e.g., 3.14, 0.5)
+  processed = processed.replace(/(\d)\.(\d)/g, `$1${DECIMAL_PLACEHOLDER}$2`);
+
+  // Protect common abbreviations
+  processed = processed.replace(/\b([a-zA-Z]+)\./g, (match, abbr) => {
+    if (ABBREVIATIONS.has(abbr.toLowerCase())) {
+      return abbr + ABBREV_PLACEHOLDER;
+    }
+    return match;
+  });
+
+  // Protect i.e. and e.g. specifically (with both periods)
+  processed = processed.replace(/\bi\.e\./gi, `i${ABBREV_PLACEHOLDER}e${ABBREV_PLACEHOLDER}`);
+  processed = processed.replace(/\be\.g\./gi, `e${ABBREV_PLACEHOLDER}g${ABBREV_PLACEHOLDER}`);
+
+  return processed;
+}
+
+/**
+ * Restore protected periods back to normal periods
+ * @param {string} text - Text with placeholders
+ * @returns {string} Text with periods restored
+ */
+function restorePeriods(text) {
+  return text
+    .replace(new RegExp(DECIMAL_PLACEHOLDER, 'g'), '.')
+    .replace(new RegExp(ABBREV_PLACEHOLDER, 'g'), '.');
+}
+
 export function analyzeSentences(text) {
-  const sentences = text.match(sentenceRegex) || [];
+  // Protect abbreviations and decimals before splitting
+  const protectedText = protectPeriods(text);
+  const sentences = protectedText.match(sentenceRegex) || [];
+
   return sentences
     .map((s, i) => {
-      const words = s.trim().match(wordRegex) || [];
+      // Restore periods and process
+      const restored = restorePeriods(s.trim());
+      const words = restored.match(wordRegex) || [];
       const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
       return {
         index: i + 1,
-        text: s.trim(),
+        text: restored,
         wordCount: words.length,
         syllableCount: syllables,
       };

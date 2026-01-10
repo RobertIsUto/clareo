@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { FORMAL_REGISTER_PHRASES, CONNECTIVES, FORMULAIC_NGRAMS } from '../constants/phrases.js';
 
-export const TextHighlighter = ({ text, mode }) => {
+export const TextHighlighter = memo(function TextHighlighter({ text, mode }) {
   const highlightedText = useMemo(() => {
     if (mode === "none") return <div className="text-content">{text}</div>;
 
@@ -45,4 +45,4 @@ export const TextHighlighter = ({ text, mode }) => {
   }, [text, mode]);
 
   return <div className="highlighter-container">{highlightedText}</div>;
-};
+});

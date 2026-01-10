@@ -147,7 +147,7 @@ export default function CalculationDrawer({
                 </div>
                 <div className="component-item">
                   <span className="component-label">Syntactic Patterns:</span>
-                  <span className="component-value">{calculationData.components.syntaxScore.toFixed(1)} pts (30%)</span>
+                  <span className="component-value">{calculationData.components.syntaxScore.toFixed(1)} pts (35%)</span>
                 </div>
                 <div className="component-item">
                   <span className="component-label">Error Consistency:</span>

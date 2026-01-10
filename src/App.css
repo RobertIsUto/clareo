@@ -50,6 +50,90 @@
   --font-display: 'Playfair Display', serif;
 }
 
+/* Dark Theme Variables */
+[data-theme="dark"] {
+  /* Color Palette - Dark Mode */
+  --primary: #5BA3C5;
+  --primary-light: #7BBDDB;
+  --primary-dark: #3A8AAB;
+  --accent: #E5C29F;
+  --accent-light: #F0D8BE;
+
+  /* Neutrals */
+  --bg-primary: #1A1D24;
+  --bg-secondary: #242830;
+  --text-primary: #E8ECF0;
+  --text-secondary: #A8B4C0;
+  --text-muted: #6B7785;
+
+  /* Semantic Colors - Adjusted for dark mode */
+  --success: #5BB888;
+  --info: #5B95A8;
+  --warning: #D4A855;
+  --caution: #D48865;
+  --error: #D47565;
+
+  /* Borders & Shadows */
+  --border-light: #363C48;
+  --border-medium: #454D5C;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.35), 0 4px 10px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* Dark mode specific overrides */
+[data-theme="dark"] .panel {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .header {
+  background: var(--bg-secondary);
+  border-bottom-color: var(--border-medium);
+}
+
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+[data-theme="dark"] .metric-card:hover {
+  background: var(--bg-primary);
+}
+
+[data-theme="dark"] .highlighter-btn {
+  background: var(--bg-primary);
+}
+
+[data-theme="dark"] .calculation-drawer {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .references {
+  background: var(--bg-secondary);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary);
+  background: var(--bg-secondary);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

@@ -36,13 +36,8 @@ export const COMMON_ERROR_PATTERNS = [
     severity: 2,
     description: 'Possible your/you\'re confusion'
   },
-  {
-    id: 'affect-effect',
-    pattern: /\b(affect|effect)(s|ed|ing)?\b/gi,
-    type: 'commonly-confused',
-    severity: 1,
-    description: 'Commonly confused word pair'
-  },
+  // REMOVED: affect-effect pattern - matched ALL uses, not just errors
+  // Cannot determine correct usage without context (both words are valid)
   {
     id: 'then-than',
     pattern: /\b(more|less|better|worse|rather)\s+then\b/gi,
@@ -57,20 +52,10 @@ export const COMMON_ERROR_PATTERNS = [
     severity: 2,
     description: 'Spacing error: "alot" should be "a lot"'
   },
-  {
-    id: 'loose-lose',
-    pattern: /\b(loose|lose)(s|d|ing)?\b/gi,
-    type: 'commonly-confused',
-    severity: 1,
-    description: 'Loose/lose confusion'
-  },
-  {
-    id: 'their-there',
-    pattern: /\b(their|there|they're)\b/gi,
-    type: 'commonly-confused',
-    severity: 1,
-    description: 'Their/there/they\'re usage'
-  },
+  // REMOVED: loose-lose pattern - matched ALL uses, not just errors
+  // Cannot determine correct usage without context (both words are valid)
+  // REMOVED: their-there pattern - matched ALL uses, not just errors
+  // Cannot determine correct usage without context (all three forms are valid)
   {
     id: 'comma-splice-potential',
     pattern: /,\s+(however|therefore|moreover|furthermore|nevertheless|thus|hence)\s+/gi,

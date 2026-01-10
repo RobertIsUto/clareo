@@ -37,6 +37,15 @@ export function excludeQuotedText(text) {
   // Remove content inside double quotes (replace with single space to preserve word boundaries)
   normalizedText = normalizedText.replace(/"[^"]*"/g, ' ');
 
+  // Remove content inside single quotes ONLY when they appear to be quotations
+  // (preceded by space/start/punctuation and followed by space/end/punctuation)
+  // This preserves contractions like "don't" and possessives like "John's"
+  // Uses a two-step approach since JS doesn't support lookbehind in all environments
+  normalizedText = normalizedText.replace(
+    /(^|[\s,.:;!?(])'([^']*)'(?=[\s,.:;!?)]|$)/g,
+    '$1 '
+  );
+
   return normalizedText;
 }
 
